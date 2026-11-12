@@ -18,6 +18,19 @@ internal sealed class Program
             .UsePlatformDetect()
 #if LINUX
             .UseWaylandWithFallback()
+#elif WINDOWS
+.With(new Win32PlatformOptions
+{
+    RenderingMode =
+            [
+                Win32RenderingMode.Vulkan,
+                Win32RenderingMode.Software
+            ],
+    CompositionMode =
+            [
+                Win32CompositionMode.RedirectionSurface
+            ]
+})
 #endif
             .WithInterFont()
             .LogToTrace();
