@@ -1,0 +1,11 @@
+﻿<Solution>
+  <!-- <Project Path="AvaStudio.Android/AvaStudio.Android.csproj">
+    <Deploy />
+  </Project> -->
+  <!-- <Project Path="AvaStudio.Browser/AvaStudio.Browser.csproj" /> -->
+  <Project Path="AvaStudio.Desktop/AvaStudio.Desktop.csproj" />
+  <!-- <Project Path="AvaStudio.iOS/AvaStudio.iOS.csproj">
+    <Deploy />
+  </Project> -->
+  <Project Path="AvaStudio/AvaStudio.csproj" />
+</Solution>
