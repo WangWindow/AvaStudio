@@ -397,6 +397,7 @@ public sealed partial class MusicPageViewModel : PageViewModelBase
         }
 
         SongEntries.Clear();
+        var rowIndex = 0;
         foreach (var group in Songs.GroupBy(song => LibraryTextSort.GetLetterHeader(song.Title))
                      .OrderBy(static group => GetHeaderOrder(group.Key))
                      .ThenBy(static group => group.Key, StringComparer.CurrentCultureIgnoreCase))
@@ -404,7 +405,7 @@ public sealed partial class MusicPageViewModel : PageViewModelBase
             SongEntries.Add(SongListEntry.FromHeader(group.Key));
             foreach (var song in group)
             {
-                SongEntries.Add(SongListEntry.FromSong(song));
+                SongEntries.Add(SongListEntry.FromSong(song, rowIndex++ % 2 == 0));
             }
         }
 

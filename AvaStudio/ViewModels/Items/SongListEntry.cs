@@ -9,10 +9,11 @@ namespace AvaStudio.ViewModels.Items;
 /// </summary>
 public sealed class SongListEntry
 {
-    private SongListEntry(string? header, MediaItemViewModel? song)
+    private SongListEntry(string? header, MediaItemViewModel? song, bool isAlternate)
     {
         Header = header;
         Song = song;
+        IsAlternate = isAlternate;
     }
 
     /// <summary>字母分组标题；歌曲行为 null。</summary>
@@ -24,7 +25,11 @@ public sealed class SongListEntry
     /// <summary>是否为字母表头。</summary>
     public bool IsHeader => Song is null;
 
-    public static SongListEntry FromHeader(string header) => new(header, null);
+    /// <summary>是否为交替行；表头行始终为 false。</summary>
+    public bool IsAlternate { get; }
 
-    public static SongListEntry FromSong(MediaItemViewModel song) => new(null, song);
+    public static SongListEntry FromHeader(string header) => new(header, null, isAlternate: false);
+
+    public static SongListEntry FromSong(MediaItemViewModel song, bool isAlternate) =>
+        new(null, song, isAlternate);
 }

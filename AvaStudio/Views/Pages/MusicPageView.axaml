@@ -80,7 +80,6 @@
         </StackPanel>
       </Button>
 
-      <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="divider" Margin="0,16,0,0" />
     </Grid>
 
     <!-- 工具行：随机播放、排序/流派筛选与当前分区计数。 -->
@@ -103,6 +102,10 @@
         <TextBlock Classes="tertiary" Text="{Binding ArtistCountText}" IsVisible="{Binding IsArtistsSelected}" VerticalAlignment="Center" />
 
         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" IsVisible="{Binding IsSongsSelected}">
+          <fi:SymbolIcon Symbol="ArrowSort"
+            FontSize="14"
+            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+            VerticalAlignment="Center" />
           <TextBlock Classes="tertiary" Text="排序" VerticalAlignment="Center" />
           <ComboBox Classes="toolbar-select"
             MinWidth="112"
@@ -110,7 +113,12 @@
             SelectedIndex="{Binding SelectedSortIndex, Mode=TwoWay}"
             AutomationProperties.Name="排序方式"
             ToolTip.Tip="按标题、艺术家或专辑排序" />
-          <TextBlock Classes="tertiary" Text="流派" Margin="6,0,0,0" VerticalAlignment="Center" />
+          <fi:SymbolIcon Symbol="Filter"
+            FontSize="13"
+            Margin="6,0,0,0"
+            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+            VerticalAlignment="Center" />
+          <TextBlock Classes="tertiary" Text="流派" VerticalAlignment="Center" />
           <ComboBox Classes="toolbar-select"
             MinWidth="128"
             ItemsSource="{Binding Genres}"
@@ -133,59 +141,47 @@
       </StackPanel>
     </Grid>
 
-    <!-- 歌曲分区：列头 + 行。 -->
+    <!-- 歌曲分区：直接以字母分组开始，行交替底色；保持虚拟化。 -->
     <Grid Grid.Row="2" IsVisible="{Binding IsSongsSelected}">
-      <Grid IsVisible="{Binding HasSongs}" Margin="40,12,40,32" RowDefinitions="Auto,*">
-        <Grid ColumnDefinitions="44,3*,2*,2*,2*,88" Height="30" Margin="8,0,8,4">
-          <TextBlock Grid.Column="1" Classes="column-header" Text="标题" />
-          <TextBlock Grid.Column="2" Classes="column-header" Text="艺术家" Margin="0,0,12,0" />
-          <TextBlock Grid.Column="3" Classes="column-header" Text="专辑" Margin="0,0,12,0" />
-          <TextBlock Grid.Column="4" Classes="column-header" Text="流派" Margin="0,0,12,0" />
-          <TextBlock Grid.Column="5" Classes="column-header" Text="时长" HorizontalAlignment="Right" />
-        </Grid>
+      <ScrollViewer IsVisible="{Binding HasSongs}"
+        Margin="40,12,40,32"
+        VerticalScrollBarVisibility="Auto"
+        HorizontalScrollBarVisibility="Disabled">
+        <!-- 扁平化表头/歌曲行，交给 VirtualizingStackPanel 只创建视口内的行。 -->
+        <ItemsControl ItemsSource="{Binding SongEntries}"
+          HorizontalAlignment="Stretch"
+          ItemContainerTheme="{StaticResource LibraryRowContainer}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <VirtualizingStackPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="items:SongListEntry">
+              <Grid>
+                <TextBlock Classes="group-header"
+                  Text="{Binding Header}"
+                  IsVisible="{Binding IsHeader}" />
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-          <!-- 扁平化表头/歌曲行，交给 VirtualizingStackPanel 只创建视口内的行。 -->
-          <ItemsControl ItemsSource="{Binding SongEntries}"
-            HorizontalAlignment="Stretch"
-            ItemContainerTheme="{StaticResource LibraryRowContainer}">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate>
-                <VirtualizingStackPanel />
-              </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="items:SongListEntry">
-                <Grid>
-                  <TextBlock Classes="group-header"
-                    Text="{Binding Header}"
-                    IsVisible="{Binding IsHeader}" />
-
-                  <Button Classes="library-row"
-                    IsVisible="{Binding !IsHeader}"
-                    Command="{Binding Song.PlayCommand}"
-                    AutomationProperties.Name="{Binding Song.Title}"
-                    ToolTip.Tip="播放歌曲">
-                    <Grid ColumnDefinitions="44,3*,2*,2*,2*,88">
-                      <fi:SymbolIcon Grid.Column="0"
-                        Symbol="Play"
-                        FontSize="12"
-                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="1" Classes="row-title" Text="{Binding Song.Title}" Margin="0,0,12,0" />
-                      <TextBlock Grid.Column="2" Classes="row-meta" Text="{Binding Song.Artist}" Margin="0,0,12,0" />
-                      <TextBlock Grid.Column="3" Classes="row-meta" Text="{Binding Song.Album}" Margin="0,0,12,0" />
-                      <TextBlock Grid.Column="4" Classes="row-meta" Text="{Binding Song.Genre}" Margin="0,0,12,0" />
-                      <TextBlock Grid.Column="5" Classes="tertiary" Text="{Binding Song.DurationText}" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                    </Grid>
-                  </Button>
-                </Grid>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </ScrollViewer>
-      </Grid>
+                <Button Classes="library-row song-row"
+                  Classes.alternate="{Binding IsAlternate}"
+                  IsVisible="{Binding !IsHeader}"
+                  Command="{Binding Song.PlayCommand}"
+                  AutomationProperties.Name="{Binding Song.Title}"
+                  ToolTip.Tip="播放歌曲">
+                  <Grid ColumnDefinitions="44,3*,2*,2*,2*,88">
+                    <TextBlock Grid.Column="1" Classes="row-title" Text="{Binding Song.Title}" Margin="0,0,12,0" />
+                    <TextBlock Grid.Column="2" Classes="row-meta" Text="{Binding Song.Artist}" Margin="0,0,12,0" />
+                    <TextBlock Grid.Column="3" Classes="row-meta" Text="{Binding Song.Album}" Margin="0,0,12,0" />
+                    <TextBlock Grid.Column="4" Classes="row-meta" Text="{Binding Song.Genre}" Margin="0,0,12,0" />
+                    <TextBlock Grid.Column="5" Classes="row-meta" Text="{Binding Song.DurationText}" HorizontalAlignment="Right" />
+                  </Grid>
+                </Button>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
     </Grid>
 
     <!-- 专辑分区：按字母分组，组内为可换行封面网格。 -->

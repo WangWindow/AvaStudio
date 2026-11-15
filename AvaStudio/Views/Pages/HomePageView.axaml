@@ -42,7 +42,6 @@
         </SplitButton.Flyout>
       </SplitButton>
 
-      <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="divider" Margin="0,16,0,0" />
     </Grid>
 
     <!-- 有最近项目：最近区块随页面滚动。 -->

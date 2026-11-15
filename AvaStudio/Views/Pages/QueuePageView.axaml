@@ -40,7 +40,6 @@
         </SplitButton.Flyout>
       </SplitButton>
 
-      <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="divider" Margin="0,16,0,0" />
     </Grid>
 
     <!-- 工具行：清除、添加到播放列表、多选；右侧是队列摘要。 -->

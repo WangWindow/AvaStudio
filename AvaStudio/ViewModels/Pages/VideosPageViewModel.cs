@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 using FluentIcons.Common;
 using AvaStudio.Models;
 using AvaStudio.Services;
+using AvaStudio.Services.Library;
 using AvaStudio.Services.Settings;
 using AvaStudio.ViewModels.Items;
 
@@ -250,7 +251,11 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
         FolderVideos.Clear();
         if (folder is not null)
         {
-            foreach (var child in folder.Children)
+            // 参考 Screenbox：非空文件夹优先，数量相同再按拼音名称排序。
+            foreach (var child in folder.Children
+                         .OrderByDescending(static child => child.ItemCount)
+                         .ThenBy(static child => LibraryTextSort.GetSortKey(child.Name), StringComparer.OrdinalIgnoreCase)
+                         .ThenBy(static child => child.Name, StringComparer.CurrentCultureIgnoreCase))
             {
                 Folders.Add(new VideoFolderItemViewModel(child, OpenFolder));
             }

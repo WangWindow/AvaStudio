@@ -99,7 +99,6 @@
         </StackPanel>
       </Button>
 
-      <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="divider" Margin="0,16,0,0" />
     </Grid>
 
     <!-- 工具行：当前目录名；位于子文件夹时显示返回；右侧为计数与位置摘要。 -->
@@ -168,10 +167,10 @@
                     AutomationProperties.Name="{Binding Name}"
                     ToolTip.Tip="打开文件夹">
                     <StackPanel>
-                      <Border Width="240" Height="135" Classes="artwork-frame">
+                      <Border Width="240" Height="135" Classes="artwork-frame folder-artwork">
                         <fi:SymbolIcon Symbol="Folder"
-                          FontSize="40"
-                          Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                          FontSize="44"
+                          Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
                           HorizontalAlignment="Center"
                           VerticalAlignment="Center" />
                       </Border>

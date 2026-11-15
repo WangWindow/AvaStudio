@@ -67,7 +67,6 @@
         </Button>
       </Grid>
 
-      <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="divider" Margin="0,16,0,0" />
     </Grid>
 
     <!-- 新建表单：只在卡片列表状态显示，避免覆盖详情页。 -->
