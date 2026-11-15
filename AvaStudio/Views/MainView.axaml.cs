@@ -572,7 +572,7 @@ public partial class MainView : UserControl
     }
 
     /// <summary>
-    /// 独立播放页：音视频共用 48 DIP 标题栏和窗口边框；系统全屏只由播放页里的
+    /// 独立播放页：音视频共用 32 DIP 标题栏和窗口边框；系统全屏只由播放页里的
     /// 全屏按钮触发，进入全屏时隐藏标题栏但保留底部 Popup 控制。
     /// </summary>
     private void ApplyImmersiveState(bool isImmersive, bool force = false)
@@ -615,7 +615,7 @@ public partial class MainView : UserControl
         var isPlayerFullscreen = isImmersive && _playerFullScreen;
 
         TitleBarStrip.IsVisible = !isPlayerFullscreen;
-        ShellGrid.RowDefinitions[0].Height = new GridLength(isPlayerFullscreen ? 0 : 48);
+        ShellGrid.RowDefinitions[0].Height = new GridLength(isPlayerFullscreen ? 0 : 32);
         MainRoot.Classes.Set("player-fullscreen", isPlayerFullscreen);
 
         if (_viewModel is not null)
@@ -711,7 +711,7 @@ public partial class MainView : UserControl
         MainRoot.Classes.Set("player-immersive", false);
         MainRoot.Classes.Set("player-fullscreen", false);
         TitleBarStrip.IsVisible = true;
-        ShellGrid.RowDefinitions[0].Height = new GridLength(48);
+        ShellGrid.RowDefinitions[0].Height = new GridLength(32);
         BottomHost.IsVisible = true;
 
         if (_viewModel is not null)
@@ -1151,3 +1151,4 @@ public partial class MainView : UserControl
         }
     }
 }
+

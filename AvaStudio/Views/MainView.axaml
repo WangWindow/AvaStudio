@@ -17,7 +17,7 @@
   </UserControl.Styles>
 
   <Grid x:Name="MainRoot" Classes="expanded" ClipToBounds="True">
-    <Grid x:Name="ShellGrid" RowDefinitions="48,*,Auto">
+    <Grid x:Name="ShellGrid" RowDefinitions="32,*,Auto">
 
       <!-- 内容表面：位于标题栏、导航和内容之下，只给右侧内容区一层比侧边栏更亮的底色。 -->
       <Border x:Name="ContentSurface"
@@ -158,7 +158,7 @@
       </Border>
 
       <!-- 导航面板贯穿标题栏、内容与底栏行，作为整个外壳的左侧表面；
-           标题栏绘制在它上面，内层用 48 高垫片让出标题栏。 -->
+           标题栏绘制在它上面，内层用 32 高垫片让出标题栏。 -->
       <Border x:Name="NavPanel"
         Grid.Row="0"
         Grid.RowSpan="3"
@@ -167,8 +167,8 @@
         VerticalAlignment="Stretch"
         BorderBrush="{DynamicResource SystemControlBackgroundBaseLowBrush}"
         BorderThickness="0,0,1,0">
-        <Grid RowDefinitions="48,Auto,Auto,*,Auto">
-          <!-- 面板顶部 48 高条：返回按钮始终在侧边栏里；右侧由标题栏的应用名占用。 -->
+        <Grid RowDefinitions="32,Auto,Auto,*,Auto">
+          <!-- 面板顶部 32 高条：返回按钮始终在侧边栏里；右侧由标题栏的应用名占用。 -->
           <Grid Grid.Row="0" x:Name="PaneTopStrip">
             <Button x:Name="BackButton"
               Classes="icon-tool"
@@ -482,3 +482,4 @@
     </Border>
   </Grid>
 </UserControl>
+
