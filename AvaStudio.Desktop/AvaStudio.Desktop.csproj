@@ -6,12 +6,20 @@
     <TargetFramework>net11.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- 程序图标与文件版本信息（版本号来自根目录 Directory.Build.props） -->
+    <ApplicationIcon>..\AvaStudio\Assets\Icon.ico</ApplicationIcon>
+    <AssemblyTitle>AvaStudio</AssemblyTitle>
+    <Product>AvaStudio</Product>
+    <Company>WangWindow</Company>
+    <Copyright>Copyright © 2026 WangWindow</Copyright>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
     <PublishAot>true</PublishAot>
+    <!-- Windows Shell 缩略图通过 ComImport/RCW 调用；Native AOT 需要内置 COM 互操作支持。 -->
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
   </PropertyGroup>
 
   <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Linux'))">
@@ -29,5 +37,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AvaStudio\AvaStudio.csproj" />
+  </ItemGroup>
+
+  <!-- libmpv 原生库由用户放在仓库根目录 runtimes/libmpv/<rid>/；
+       构建与发布时复制到输出目录的 libmpv/<rid>/，应用只从该私有目录加载。 -->
+  <ItemGroup>
+    <None Include="..\runtimes\libmpv\**\*"
+      Link="libmpv\%(RecursiveDir)%(Filename)%(Extension)"
+      CopyToOutputDirectory="PreserveNewest"
+      CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,76 @@
+<Styles xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- 自定义标题栏使用 Tall 48 DIP 高度；caption 命中区铺满标题行，
+       与系统 Tall 标题栏一致。除关闭按钮的标准 Windows 红色悬停外，
+       所有颜色都来自 Fluent 主题资源。 -->
+  <Style Selector="Button.caption">
+    <Setter Property="Width" Value="46" />
+    <Setter Property="Height" Value="48" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="IsVisible" Value="False" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}"
+          BorderBrush="{TemplateBinding BorderBrush}"
+          BorderThickness="{TemplateBinding BorderThickness}">
+          <ContentPresenter
+            Content="{TemplateBinding Content}"
+            ContentTemplate="{TemplateBinding ContentTemplate}"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.caption:pointerover">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+  </Style>
+
+  <Style Selector="Button.caption:pressed">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListMediumBrush}" />
+  </Style>
+
+  <Style Selector="Button.caption:focus">
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.window-inactive Button.caption">
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+  </Style>
+
+  <Style Selector="Border#TitleBarDragRegion">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <!-- 关闭按钮是唯一使用彩色悬停/按下状态的标题栏按钮。 -->
+  <Style Selector="Button.close:pointerover">
+    <Setter Property="Background" Value="#C42B1C" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+
+  <Style Selector="Button.close:pressed">
+    <Setter Property="Background" Value="#B02418" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+
+  <!-- 窗口失焦时，关闭按钮在红色表面上仍保持白色图标。 -->
+  <Style Selector="Grid#MainRoot.window-inactive Button.close:pointerover">
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.window-inactive Button.close:pressed">
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+</Styles>
+

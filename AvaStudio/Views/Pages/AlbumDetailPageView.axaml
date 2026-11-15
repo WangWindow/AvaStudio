@@ -1,0 +1,109 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:fi="using:FluentIcons.Avalonia"
+  xmlns:pages="using:AvaStudio.ViewModels.Pages"
+  xmlns:vm="using:AvaStudio.ViewModels"
+  mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+  x:Class="AvaStudio.Views.Pages.AlbumDetailPageView"
+  x:DataType="pages:AlbumDetailPageViewModel"
+  x:CompileBindings="True">
+  <UserControl.Styles>
+    <StyleInclude Source="avares://AvaStudio/Styles/PageStyles.axaml" />
+    <StyleInclude Source="avares://AvaStudio/Styles/LibraryStyles.axaml" />
+  </UserControl.Styles>
+
+  <UserControl.Resources>
+    <!-- 曲目行需要占满宽度，才能与列头对齐。 -->
+    <ControlTheme x:Key="LibraryRowContainer" TargetType="ContentPresenter">
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </ControlTheme>
+  </UserControl.Resources>
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="40,32,40,40">
+      <!-- 封面与信息；返回由标题栏承担。 -->
+      <Grid ColumnDefinitions="Auto,*">
+        <Border Classes="detail-cover">
+          <Grid>
+            <fi:SymbolIcon Symbol="Album"
+              FontSize="44"
+              Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center" />
+            <Image Source="{Binding Artwork}"
+              IsVisible="{Binding HasArtwork}"
+              Width="192"
+              Height="192"
+              Stretch="UniformToFill" />
+          </Grid>
+        </Border>
+
+        <StackPanel Grid.Column="1" Margin="28,0,0,0" VerticalAlignment="Center">
+          <TextBlock Classes="page-title" Text="{Binding AlbumName}" TextWrapping="Wrap" />
+          <TextBlock Classes="detail-artist" Text="{Binding ArtistName}" Margin="0,6,0,0" />
+          <TextBlock Classes="page-subtitle" Text="{Binding SummaryText}" Margin="0,6,0,0" />
+
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,20,0,0">
+            <Button Classes="accent page-action"
+              Command="{Binding PlayAllCommand}"
+              AutomationProperties.Name="播放全部">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <fi:SymbolIcon Symbol="Play" FontSize="13" />
+                <TextBlock Text="播放全部" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+
+            <Button Classes="page-action"
+              Command="{Binding ShuffleCommand}"
+              AutomationProperties.Name="随机播放专辑">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <fi:SymbolIcon Symbol="ArrowShuffle" FontSize="14" />
+                <TextBlock Text="随机播放" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </StackPanel>
+      </Grid>
+
+      <Border Classes="divider" Margin="0,28,0,0" />
+
+      <!-- 曲目表：标题 / 艺术家 / 专辑 / 流派 / 时长。 -->
+      <Grid ColumnDefinitions="44,*,2*,2*,2*,88" Height="30" Margin="8,20,8,4">
+        <TextBlock Grid.Column="1" Classes="column-header" Text="标题" />
+        <TextBlock Grid.Column="2" Classes="column-header" Text="艺术家" Margin="0,0,12,0" />
+        <TextBlock Grid.Column="3" Classes="column-header" Text="专辑" Margin="0,0,12,0" />
+        <TextBlock Grid.Column="4" Classes="column-header" Text="流派" Margin="0,0,12,0" />
+        <TextBlock Grid.Column="5" Classes="column-header" Text="时长" HorizontalAlignment="Right" />
+      </Grid>
+
+      <ItemsControl ItemsSource="{Binding Tracks}"
+        HorizontalAlignment="Stretch"
+        ItemContainerTheme="{StaticResource LibraryRowContainer}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:MediaItemViewModel">
+            <Button Classes="library-row"
+              Command="{Binding PlayCommand}"
+              AutomationProperties.Name="{Binding Title}"
+              ToolTip.Tip="播放曲目">
+              <Grid ColumnDefinitions="44,*,2*,2*,2*,88">
+                <fi:SymbolIcon Grid.Column="0"
+                  Symbol="Play"
+                  FontSize="12"
+                  Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Classes="row-title" Text="{Binding Title}" Margin="0,0,12,0" />
+                <TextBlock Grid.Column="2" Classes="row-meta" Text="{Binding Artist}" Margin="0,0,12,0" />
+                <TextBlock Grid.Column="3" Classes="row-meta" Text="{Binding Album}" Margin="0,0,12,0" />
+                <TextBlock Grid.Column="4" Classes="row-meta" Text="{Binding Genre}" Margin="0,0,12,0" />
+                <TextBlock Grid.Column="5" Classes="tertiary" Text="{Binding DurationText}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

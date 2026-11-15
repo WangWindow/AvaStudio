@@ -1,0 +1,241 @@
+<Styles xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- 播放条是内容区底部的深色 Fluent 卡片：颜色只取 Fluent 资源，
+       不使用品牌渐变或大色块。深色由 PlayerBarView 的 ThemeVariantScope 提供。 -->
+  <Style Selector="Border.player-card">
+    <Setter Property="Height" Value="126" />
+    <Setter Property="Padding" Value="16" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlBackgroundBaseLowBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BoxShadow" Value="0 4 16 0 #4D000000" />
+  </Style>
+
+  <Style Selector="Border.player-cover">
+    <Setter Property="Width" Value="88" />
+    <Setter Property="Height" Value="88" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlBackgroundBaseLowBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="Border.player-chip">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Padding" Value="6,2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="TextBlock.player-chip-text">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="TextBlock.player-title">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+
+  <Style Selector="TextBlock.player-meta">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+
+  <!-- 时间用等宽数字，播放时不会左右抖动。 -->
+  <Style Selector="TextBlock.player-time">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Microsoft YaHei UI, Segoe UI" />
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Button.player-icon">
+    <Setter Property="Width" Value="32" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.12" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.player-icon:pointerover">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+  </Style>
+
+  <Style Selector="Button.player-icon:pressed">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListMediumBrush}" />
+  </Style>
+
+  <Style Selector="Button.player-icon:focus">
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <!-- 播放/暂停是这一组的焦点：圆形底色比其他图标按钮大一号。 -->
+  <Style Selector="Button.player-play">
+    <Setter Property="Width" Value="36" />
+    <Setter Property="Height" Value="36" />
+    <Setter Property="CornerRadius" Value="18" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+  </Style>
+
+  <Style Selector="Button.player-play:pointerover">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListMediumBrush}" />
+  </Style>
+
+  <Style Selector="Button.player-play:pressed">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+  </Style>
+
+  <!-- 随机播放开启时保留开关状态，不改变图标含义。 -->
+  <Style Selector="Button.player-toggle.active">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListMediumBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+  </Style>
+
+  <!-- 整块封面就是展开按钮；自定义模板去掉 Fluent 的默认悬停底色。 -->
+  <Style Selector="Button.player-cover-button">
+    <Setter Property="Width" Value="88" />
+    <Setter Property="Height" Value="88" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <ContentPresenter Content="{TemplateBinding Content}"
+          ContentTemplate="{TemplateBinding ContentTemplate}"
+          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <!-- 轻微的暗色遮罩只提示可点击，不覆盖封面信息。 -->
+  <Style Selector="Border.cover-hover-overlay">
+    <Setter Property="Background" Value="#000000" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.1" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.player-cover-button:pointerover Border.cover-hover-overlay">
+    <Setter Property="Opacity" Value="0.1" />
+  </Style>
+
+  <Style Selector="Button.player-cover-button:pressed Border.cover-hover-overlay">
+    <Setter Property="Opacity" Value="0.18" />
+  </Style>
+
+  <!-- 左上角仅作视觉提示的展开/收起徽标，不参与命中。 -->
+  <Style Selector="Border.cover-expand-badge">
+    <Setter Property="Width" Value="28" />
+    <Setter Property="Height" Value="28" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlBackgroundBaseLowBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <!-- 播放条与沉浸页共用 Styles/PlayerSliderResources.axaml 里的滑杆模板。 -->
+  <Style Selector="Slider.player-slider">
+    <Setter Property="Height" Value="20" />
+    <Setter Property="MinHeight" Value="20" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <Style Selector="Slider.player-slider:disabled">
+    <Setter Property="Opacity" Value="0.45" />
+  </Style>
+
+  <!-- 模板里的拇指不写死尺寸，交给样式以便悬停放大。 -->
+  <Style Selector="Slider.player-slider /template/ Thumb#PART_Thumb">
+    <Setter Property="Width" Value="14" />
+    <Setter Property="Height" Value="14" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Width" Duration="0:0:0.12" />
+        <DoubleTransition Property="Height" Duration="0:0:0.12" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Slider.player-slider:pointerover /template/ Thumb#PART_Thumb">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+  </Style>
+
+  <!-- 悬停在滑杆任意位置时整条轴线一起长到 6 DIP；分段悬停规则在共享模板里。 -->
+  <Style Selector="Slider.player-slider:pointerover /template/ RepeatButton /template/ Border#PART_TrackLine">
+    <Setter Property="Height" Value="6" />
+  </Style>
+
+  <Style Selector="Slider.player-volume">
+    <Setter Property="Width" Value="96" />
+  </Style>
+
+  <!-- 沉浸页的控制面比播放条更宽松：图标按钮大一号，播放键是唯一实心焦点。 -->
+  <Style Selector="Button.icon-tool.immersive-close">
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="Background" Value="#14FFFFFF" />
+    <Setter Property="BorderBrush" Value="#1FFFFFFF" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="Button.icon-tool.immersive-close:pointerover">
+    <Setter Property="Background" Value="#26FFFFFF" />
+  </Style>
+
+  <Style Selector="Button.player-icon.immersive">
+    <Setter Property="Width" Value="36" />
+    <Setter Property="Height" Value="36" />
+  </Style>
+
+  <Style Selector="TextBlock.player-time.immersive">
+    <Setter Property="FontSize" Value="12.5" />
+  </Style>
+
+  <Style Selector="Button.player-play.immersive">
+    <Setter Property="Width" Value="44" />
+    <Setter Property="Height" Value="44" />
+    <Setter Property="CornerRadius" Value="22" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}" />
+  </Style>
+
+  <Style Selector="Button.player-play.immersive:pointerover">
+    <Setter Property="Background" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+    <Setter Property="Opacity" Value="0.9" />
+  </Style>
+
+  <Style Selector="Button.player-play.immersive:pressed">
+    <Setter Property="Background" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+    <Setter Property="Opacity" Value="0.82" />
+  </Style>
+</Styles>

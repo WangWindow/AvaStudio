@@ -1,0 +1,250 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:controls="using:AvaStudio.Views.Controls"
+  xmlns:fi="using:FluentIcons.Avalonia"
+  xmlns:pages="using:AvaStudio.ViewModels.Pages"
+  xmlns:vm="using:AvaStudio.ViewModels"
+  mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+  x:Class="AvaStudio.Views.Pages.QueuePageView"
+  x:DataType="pages:QueuePageViewModel"
+  x:CompileBindings="True">
+  <UserControl.Styles>
+    <StyleInclude Source="avares://AvaStudio/Styles/PageStyles.axaml" />
+    <StyleInclude Source="avares://AvaStudio/Styles/ListStyles.axaml" />
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,Auto,*">
+    <!-- 页头：添加文件是页面主操作，次操作收在右侧菜单里。 -->
+    <Grid Grid.Row="0" Margin="40,24,40,0" RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
+      <TextBlock Classes="page-title" Text="播放队列" />
+
+      <SplitButton Grid.Column="1"
+        Classes="page-action"
+        VerticalAlignment="Center"
+        Command="{Binding AddFilesCommand}"
+        AutomationProperties.Name="添加文件到播放队列"
+        ToolTip.Tip="添加文件或文件夹">
+        <SplitButton.Content>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <fi:SymbolIcon Symbol="DocumentAdd" FontSize="15" />
+            <TextBlock Classes="header-action-label" Text="添加文件" VerticalAlignment="Center" />
+          </StackPanel>
+        </SplitButton.Content>
+        <SplitButton.Flyout>
+          <MenuFlyout Placement="BottomEdgeAlignedRight">
+            <MenuItem Header="添加文件…" Command="{Binding AddFilesCommand}" />
+            <MenuItem Header="添加文件夹…" Command="{Binding AddFolderCommand}" />
+          </MenuFlyout>
+        </SplitButton.Flyout>
+      </SplitButton>
+
+      <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="divider" Margin="0,16,0,0" />
+    </Grid>
+
+    <!-- 工具行：清除、添加到播放列表、多选；右侧是队列摘要。 -->
+    <Grid Grid.Row="1" Margin="40,14,40,0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <Button Classes="toolbar"
+          Command="{Binding ClearCommand}"
+          AutomationProperties.Name="清除播放队列"
+          ToolTip.Tip="清除播放队列">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <fi:SymbolIcon Symbol="Delete" FontSize="14" />
+            <TextBlock Classes="toolbar-label" Text="清除" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+
+        <Button Classes="toolbar"
+          IsEnabled="{Binding CanAddToPlaylist}"
+          AutomationProperties.Name="添加到播放列表"
+          ToolTip.Tip="{Binding AddToPlaylistHint}"
+          ToolTip.ShowOnDisabled="True">
+          <Button.Flyout>
+            <Flyout Placement="BottomEdgeAlignedLeft">
+              <Border MinWidth="220"
+                Padding="6"
+                CornerRadius="8"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                BorderBrush="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                BorderThickness="1">
+                <StackPanel>
+                  <TextBlock Text="添加到播放列表"
+                    Classes="section-label"
+                    Margin="10,5,10,6" />
+                  <ScrollViewer MaxHeight="320" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding PlaylistTargets}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="pages:PlaylistTargetViewModel">
+                          <Button Classes="flyout-row"
+                            Command="{Binding AddCommand}"
+                            AutomationProperties.Name="{Binding Name}">
+                            <StackPanel Orientation="Horizontal" Spacing="9">
+                              <fi:SymbolIcon Symbol="Collections"
+                                FontSize="14"
+                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                              <TextBlock Text="{Binding Name}"
+                                VerticalAlignment="Center"
+                                TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
+                </StackPanel>
+              </Border>
+            </Flyout>
+          </Button.Flyout>
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <fi:SymbolIcon Symbol="CollectionsAdd" FontSize="14" />
+            <TextBlock Classes="toolbar-label" Text="添加到播放列表" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+
+        <ToggleButton Classes="toolbar"
+          IsChecked="{Binding IsMultiSelect, Mode=TwoWay}"
+          IsEnabled="{Binding HasItems}"
+          AutomationProperties.Name="多选"
+          ToolTip.Tip="多选队列项目">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <fi:SymbolIcon Symbol="TaskListSquare" FontSize="14" />
+            <TextBlock Classes="toolbar-label" Text="多选" VerticalAlignment="Center" />
+          </StackPanel>
+        </ToggleButton>
+
+        <Button Classes="toolbar"
+          IsVisible="{Binding IsMultiSelect}"
+          IsEnabled="{Binding HasSelection}"
+          Command="{Binding RemoveSelectedCommand}"
+          AutomationProperties.Name="移除所选项目"
+          ToolTip.Tip="从播放队列移除已选项目"
+          ToolTip.ShowOnDisabled="True">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <fi:SymbolIcon Symbol="DeleteLines" FontSize="14" />
+            <TextBlock Classes="toolbar-label" Text="移除所选" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+
+      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <StackPanel Orientation="Horizontal"
+          Spacing="4"
+          IsVisible="{Binding HasSelection}">
+          <TextBlock Classes="tertiary" Text="已选" />
+          <TextBlock Classes="tertiary"
+            Text="{Binding SelectedCount}"
+            FontWeight="SemiBold"
+            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+          <TextBlock Classes="tertiary" Text="项" />
+        </StackPanel>
+        <TextBlock Text="{Binding SummaryText}"
+          Classes="tertiary queue-stats"
+          MaxWidth="260"
+          TextTrimming="CharacterEllipsis"
+          VerticalAlignment="Center" />
+      </StackPanel>
+    </Grid>
+
+    <!-- 空队列：使用横向空状态，与 Screenbox 的图标 + 文案 + 操作一致。 -->
+    <controls:EmptyStateView Grid.Row="2"
+      IsVisible="{Binding IsEmpty}"
+      Margin="40,0,40,32"
+      MaxWidth="640"
+      HorizontalAlignment="Center"
+      VerticalAlignment="Center"
+      Symbol="DocumentQueue"
+      Title="播放队列是空的"
+      Description="打开文件或把文件拖进窗口，它们会先出现在这里。"
+      PrimaryText="添加文件"
+      PrimaryIcon="FolderOpen"
+      PrimaryCommand="{Binding AddFilesCommand}"
+      ShowPrimary="True"
+      SecondaryText="添加文件夹"
+      SecondaryIcon="FolderAdd"
+      SecondaryCommand="{Binding AddFolderCommand}"
+      ShowSecondary="True" />
+
+    <!-- 队列列表：当前条目有强调竖条与底色，行内可播放或移除。 -->
+    <Grid Grid.Row="2" IsVisible="{Binding HasItems}" RowDefinitions="Auto,*" Margin="40,18,40,0">
+      <Grid Grid.Row="0" Height="24" Margin="0,0,0,4" ColumnDefinitions="Auto,3,*,32">
+        <Border Width="28" IsVisible="{Binding IsMultiSelect}" />
+        <Grid Grid.Column="2" ColumnDefinitions="24,*,2*,64">
+          <TextBlock Grid.Column="1" Classes="list-header-label" Text="标题" Margin="8,0,0,0" />
+          <TextBlock Grid.Column="2" Classes="list-header-label" Text="位置" Margin="0,0,16,0" />
+          <TextBlock Grid.Column="3" Classes="list-header-label" Text="时长" HorizontalAlignment="Right" />
+        </Grid>
+      </Grid>
+
+      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl ItemsSource="{Binding Items}" Margin="0,0,0,24">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:MediaItemViewModel">
+              <Border Classes="list-row"
+                Classes.current="{Binding IsCurrent}"
+                Classes.selected="{Binding IsSelected}">
+                <Grid ColumnDefinitions="Auto,3,*,32" Height="54">
+                  <CheckBox Grid.Column="0"
+                    Width="28"
+                    IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                    IsVisible="{Binding IsSelectionVisible}"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    AutomationProperties.Name="{Binding Title}"
+                    ToolTip.Tip="选择此项目" />
+
+                  <Border Grid.Column="1" Classes="current-bar" IsVisible="{Binding IsCurrent}" />
+
+                  <Button Grid.Column="2"
+                    Classes="row-hit"
+                    Command="{Binding PlayCommand}"
+                    AutomationProperties.Name="{Binding Title}"
+                    ToolTip.Tip="播放">
+                    <Grid ColumnDefinitions="24,*,2*,64" Height="54">
+                      <fi:SymbolIcon Grid.Column="0"
+                        Symbol="{Binding KindSymbol}"
+                        FontSize="16"
+                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                        VerticalAlignment="Center" />
+
+                      <StackPanel Grid.Column="1"
+                        Margin="8,0,12,0"
+                        VerticalAlignment="Center"
+                        Spacing="2">
+                        <TextBlock Classes="list-title"
+                          Text="{Binding Title}"
+                          ToolTip.Tip="{Binding Title}" />
+                        <TextBlock Classes="list-subtitle"
+                          Text="{Binding Subtitle}"
+                          ToolTip.Tip="{Binding Subtitle}" />
+                      </StackPanel>
+
+                      <TextBlock Grid.Column="2"
+                        Classes="list-meta"
+                        Text="{Binding DirectoryName}"
+                        Margin="0,0,16,0"
+                        ToolTip.Tip="{Binding DirectoryName}" />
+
+                      <TextBlock Grid.Column="3"
+                        Classes="list-duration"
+                        Text="{Binding DurationText}" />
+                    </Grid>
+                  </Button>
+
+                  <Button Grid.Column="3"
+                    Classes="icon-tool"
+                    Command="{Binding RemoveCommand}"
+                    AutomationProperties.Name="从播放队列移除"
+                    ToolTip.Tip="从播放队列移除">
+                    <fi:SymbolIcon Symbol="Delete" FontSize="14" />
+                  </Button>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Grid>
+  </Grid>
+</UserControl>

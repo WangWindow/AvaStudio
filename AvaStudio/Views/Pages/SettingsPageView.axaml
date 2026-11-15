@@ -1,0 +1,420 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:fi="using:FluentIcons.Avalonia"
+  xmlns:pages="using:AvaStudio.ViewModels.Pages"
+  mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+  x:Class="AvaStudio.Views.Pages.SettingsPageView"
+  x:DataType="pages:SettingsPageViewModel"
+  x:CompileBindings="True">
+  <UserControl.Styles>
+    <StyleInclude Source="avares://AvaStudio/Styles/PageStyles.axaml" />
+    <StyleInclude Source="avares://AvaStudio/Styles/ListStyles.axaml" />
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,*">
+    <!-- 页头：Windows 11 Settings 的大标题 + 简短说明。 -->
+    <StackPanel x:Name="SettingsHeader"
+      Grid.Row="0"
+      Margin="40,28,40,0"
+      Spacing="4">
+      <TextBlock Classes="settings-title" Text="设置" />
+      <TextBlock Classes="page-subtitle" Text="管理资料库、播放行为和界面偏好。" />
+    </StackPanel>
+
+    <ScrollViewer Grid.Row="1"
+      VerticalScrollBarVisibility="Auto"
+      HorizontalScrollBarVisibility="Disabled">
+      <StackPanel x:Name="SettingsContent"
+        Margin="40,24,40,48"
+        Spacing="0">
+
+        <!-- 库 -->
+        <TextBlock Classes="settings-section" Text="库" />
+
+        <StackPanel Spacing="8" Margin="0,10,0,0">
+          <!-- 资料库状态：统计、扫描状态与进度。 -->
+          <Border Classes="settings-row">
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="20,0" MinHeight="80">
+              <Border Classes="settings-icon">
+                <fi:SymbolIcon Symbol="Info"
+                  FontSize="20"
+                  Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center" />
+              </Border>
+
+              <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center" Spacing="3">
+                <TextBlock Classes="settings-row-title" Text="资料库状态" />
+                <TextBlock Classes="settings-row-description" Text="{Binding LibrarySummary}" />
+                <ProgressBar Classes="scan-progress"
+                  Margin="0,7,0,0"
+                  Minimum="0"
+                  Maximum="1"
+                  Value="{Binding ScanProgress}"
+                  IsVisible="{Binding IsScanning}" />
+              </StackPanel>
+
+              <Border Grid.Column="2"
+                Classes="settings-value"
+                ToolTip.Tip="{Binding ScanStatusText}">
+                <TextBlock Classes="settings-value-text"
+                  Text="{Binding ScanStatusText}"
+                  TextTrimming="CharacterEllipsis" />
+              </Border>
+            </Grid>
+          </Border>
+
+          <!-- 音乐资料库位置：可展开查看并移除。 -->
+          <Border Classes="settings-row">
+            <StackPanel>
+              <Grid ColumnDefinitions="Auto,*,Auto" Margin="20,0" MinHeight="80">
+                <Border Classes="settings-icon">
+                  <fi:SymbolIcon Symbol="MusicNote2"
+                    FontSize="20"
+                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center" />
+                </Border>
+
+                <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center" Spacing="3">
+                  <TextBlock Classes="settings-row-title" Text="音乐资料库位置" />
+                  <TextBlock Classes="settings-row-description" Text="{Binding MusicLocationSummary}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                  <Button Classes="page-action"
+                    Command="{Binding AddMusicFolderCommand}"
+                    AutomationProperties.Name="添加音乐资料库位置"
+                    ToolTip.Tip="选择音乐文件夹">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <fi:SymbolIcon Symbol="FolderAdd" FontSize="15" />
+                      <TextBlock Classes="settings-action-label" Text="添加文件夹" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Button>
+
+                  <ToggleButton Classes="chevron"
+                    IsChecked="{Binding IsMusicExpanded, Mode=TwoWay}"
+                    IsVisible="{Binding HasMusicLocations}"
+                    AutomationProperties.Name="展开或收起音乐资料库位置"
+                    ToolTip.Tip="展开或收起位置列表">
+                    <fi:SymbolIcon Symbol="{Binding MusicChevron}" FontSize="12" />
+                  </ToggleButton>
+                </StackPanel>
+              </Grid>
+
+              <Border IsVisible="{Binding IsMusicExpanded}"
+                Margin="20,0,20,16"
+                Padding="4"
+                CornerRadius="6"
+                Background="{DynamicResource SystemControlBackgroundListLowBrush}">
+                <ItemsControl ItemsSource="{Binding MusicLocations}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="pages:LibraryLocationItemViewModel">
+                      <Border Classes="location-row" Padding="8,6">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                          <fi:SymbolIcon Symbol="Folder"
+                            FontSize="14"
+                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                            VerticalAlignment="Center" />
+                          <StackPanel Grid.Column="1" Margin="8,0,10,0" VerticalAlignment="Center" Spacing="1">
+                            <TextBlock Text="{Binding Name}"
+                              FontSize="12.5"
+                              TextTrimming="CharacterEllipsis"
+                              ToolTip.Tip="{Binding Name}" />
+                            <TextBlock Text="{Binding Path}"
+                              FontSize="11"
+                              Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                              TextTrimming="CharacterEllipsis"
+                              ToolTip.Tip="{Binding Path}" />
+                          </StackPanel>
+                          <Button Grid.Column="2"
+                            Classes="icon-tool"
+                            Width="28"
+                            Height="28"
+                            Command="{Binding RemoveCommand}"
+                            AutomationProperties.Name="移除音乐资料库位置"
+                            ToolTip.Tip="移除位置">
+                            <fi:SymbolIcon Symbol="Delete" FontSize="13" />
+                          </Button>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Border>
+            </StackPanel>
+          </Border>
+
+          <!-- 视频资料库位置。 -->
+          <Border Classes="settings-row">
+            <StackPanel>
+              <Grid ColumnDefinitions="Auto,*,Auto" Margin="20,0" MinHeight="80">
+                <Border Classes="settings-icon">
+                  <fi:SymbolIcon Symbol="Video"
+                    FontSize="20"
+                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center" />
+                </Border>
+
+                <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center" Spacing="3">
+                  <TextBlock Classes="settings-row-title" Text="视频资料库位置" />
+                  <TextBlock Classes="settings-row-description" Text="{Binding VideoLocationSummary}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                  <Button Classes="page-action"
+                    Command="{Binding AddVideoFolderCommand}"
+                    AutomationProperties.Name="添加视频资料库位置"
+                    ToolTip.Tip="选择视频文件夹">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <fi:SymbolIcon Symbol="FolderAdd" FontSize="15" />
+                      <TextBlock Classes="settings-action-label" Text="添加文件夹" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Button>
+
+                  <ToggleButton Classes="chevron"
+                    IsChecked="{Binding IsVideoExpanded, Mode=TwoWay}"
+                    IsVisible="{Binding HasVideoLocations}"
+                    AutomationProperties.Name="展开或收起视频资料库位置"
+                    ToolTip.Tip="展开或收起位置列表">
+                    <fi:SymbolIcon Symbol="{Binding VideoChevron}" FontSize="12" />
+                  </ToggleButton>
+                </StackPanel>
+              </Grid>
+
+              <Border IsVisible="{Binding IsVideoExpanded}"
+                Margin="20,0,20,16"
+                Padding="4"
+                CornerRadius="6"
+                Background="{DynamicResource SystemControlBackgroundListLowBrush}">
+                <ItemsControl ItemsSource="{Binding VideoLocations}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="pages:LibraryLocationItemViewModel">
+                      <Border Classes="location-row" Padding="8,6">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                          <fi:SymbolIcon Symbol="Folder"
+                            FontSize="14"
+                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                            VerticalAlignment="Center" />
+                          <StackPanel Grid.Column="1" Margin="8,0,10,0" VerticalAlignment="Center" Spacing="1">
+                            <TextBlock Text="{Binding Name}"
+                              FontSize="12.5"
+                              TextTrimming="CharacterEllipsis"
+                              ToolTip.Tip="{Binding Name}" />
+                            <TextBlock Text="{Binding Path}"
+                              FontSize="11"
+                              Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                              TextTrimming="CharacterEllipsis"
+                              ToolTip.Tip="{Binding Path}" />
+                          </StackPanel>
+                          <Button Grid.Column="2"
+                            Classes="icon-tool"
+                            Width="28"
+                            Height="28"
+                            Command="{Binding RemoveCommand}"
+                            AutomationProperties.Name="移除视频资料库位置"
+                            ToolTip.Tip="移除位置">
+                            <fi:SymbolIcon Symbol="Delete" FontSize="13" />
+                          </Button>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Border>
+            </StackPanel>
+          </Border>
+
+          <!-- 重新扫描资料库。 -->
+          <Border Classes="settings-row">
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="20,0" MinHeight="80">
+              <Border Classes="settings-icon">
+                <fi:SymbolIcon Symbol="ArrowSync"
+                  FontSize="20"
+                  Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center" />
+              </Border>
+
+              <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center" Spacing="3">
+                <TextBlock Classes="settings-row-title" Text="重新扫描资料库" />
+                <TextBlock Classes="settings-row-description" Text="立即重新扫描已添加的文件夹，读取真实的媒体信息与时长。" />
+              </StackPanel>
+
+              <Button Grid.Column="2"
+                Classes="page-action"
+                Command="{Binding RefreshLibraryCommand}"
+                AutomationProperties.Name="重新扫描资料库"
+                ToolTip.Tip="立即扫描已添加的文件夹">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <fi:SymbolIcon Symbol="ArrowSync" FontSize="14" />
+                  <TextBlock Classes="settings-action-label" Text="重新扫描" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </Grid>
+          </Border>
+        </StackPanel>
+
+        <!-- 播放 -->
+        <TextBlock Classes="settings-section" Text="播放" Margin="0,28,0,0" />
+
+        <StackPanel Spacing="8" Margin="0,10,0,0">
+          <Border Classes="settings-row">
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="20,0" MinHeight="80">
+              <Border Classes="settings-icon">
+                <fi:SymbolIcon Symbol="Play"
+                  FontSize="20"
+                  Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center" />
+              </Border>
+
+              <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center" Spacing="3">
+                <TextBlock Classes="settings-row-title" Text="自动播放下一项" />
+                <TextBlock Classes="settings-row-description" Text="当前条目结束后，自动播放队列中的下一项。" />
+              </StackPanel>
+
+              <ToggleSwitch Grid.Column="2"
+                IsChecked="{Binding AutoAdvance, Mode=TwoWay}"
+                OnContent="开"
+                OffContent="关"
+                VerticalAlignment="Center"
+                AutomationProperties.Name="自动播放下一项"
+                ToolTip.Tip="当前条目结束后自动播放下一项" />
+            </Grid>
+          </Border>
+        </StackPanel>
+
+        <!-- 个性化 -->
+        <TextBlock Classes="settings-section" Text="个性化" Margin="0,28,0,0" />
+
+        <StackPanel Spacing="8" Margin="0,10,0,0">
+          <Border Classes="settings-row">
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="20,0" MinHeight="80">
+              <Border Classes="settings-icon">
+                <fi:SymbolIcon Symbol="DarkTheme"
+                  FontSize="20"
+                  Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center" />
+              </Border>
+
+              <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center" Spacing="3">
+                <TextBlock Classes="settings-row-title" Text="应用主题" />
+                <TextBlock Classes="settings-row-description" Text="选择界面配色；更改会立即应用并保存。" />
+              </StackPanel>
+
+              <ComboBox Grid.Column="2"
+                Width="170"
+                Height="32"
+                VerticalAlignment="Center"
+                ItemsSource="{Binding ThemeOptions}"
+                SelectedIndex="{Binding SelectedThemeIndex, Mode=TwoWay}"
+                AutomationProperties.Name="应用主题"
+                ToolTip.Tip="选择跟随系统、浅色或深色主题" />
+            </Grid>
+          </Border>
+
+          <Border Classes="settings-row">
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="20,0" MinHeight="80">
+              <Border Classes="settings-icon">
+                <fi:SymbolIcon Symbol="LocalLanguage"
+                  FontSize="20"
+                  Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center" />
+              </Border>
+
+              <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center" Spacing="3">
+                <TextBlock Classes="settings-row-title" Text="应用语言" />
+                <TextBlock Classes="settings-row-description" Text="界面文案使用本机设置的语言。" />
+              </StackPanel>
+
+              <Border Grid.Column="2"
+                Classes="settings-value"
+                MinWidth="120"
+                ToolTip.Tip="当前语言">
+                <TextBlock Classes="settings-value-text" Text="{Binding LanguageDisplayName}" />
+              </Border>
+            </Grid>
+          </Border>
+        </StackPanel>
+
+        <!-- 关于 -->
+        <TextBlock Classes="settings-section" Text="关于" Margin="0,28,0,0" />
+
+        <StackPanel Spacing="8" Margin="0,10,0,0">
+          <Border Classes="settings-row">
+            <Grid ColumnDefinitions="Auto,*" Margin="20,0" MinHeight="80">
+              <Border Classes="settings-icon">
+                <fi:SymbolIcon Symbol="Play"
+                  FontSize="20"
+                  Foreground="{DynamicResource SystemControlHighlightAccentBrush}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center" />
+              </Border>
+
+              <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center" Spacing="3">
+                <TextBlock Classes="settings-row-title" Text="AvaStudio" />
+                <TextBlock Classes="settings-row-description" Text="{Binding AboutSummary}" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <Border Classes="settings-row">
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="20,0" MinHeight="80">
+              <Border Classes="settings-icon">
+                <fi:SymbolIcon Symbol="Folder"
+                  FontSize="20"
+                  Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center" />
+              </Border>
+
+              <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center" Spacing="3">
+                <TextBlock Classes="settings-row-title" Text="应用数据" />
+                <TextBlock Classes="settings-row-description" Text="资料库位置、播放列表与播放记录保存在本机。" />
+                <TextBlock Text="{Binding SettingsDirectory}"
+                  FontSize="11.5"
+                  Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                  TextTrimming="CharacterEllipsis"
+                  ToolTip.Tip="{Binding SettingsDirectory}" />
+              </StackPanel>
+
+              <Button Grid.Column="2"
+                Classes="page-action"
+                Command="{Binding OpenSettingsFolderCommand}"
+                AutomationProperties.Name="打开应用数据文件夹"
+                ToolTip.Tip="打开应用数据文件夹">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <fi:SymbolIcon Symbol="FolderOpen" FontSize="14" />
+                  <TextBlock Classes="settings-action-label" Text="打开文件夹" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </Grid>
+          </Border>
+
+          <Border Classes="settings-row">
+            <Grid ColumnDefinitions="Auto,*" Margin="20,0" MinHeight="80">
+              <Border Classes="settings-icon">
+                <fi:SymbolIcon Symbol="Keyboard"
+                  FontSize="20"
+                  Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center" />
+              </Border>
+
+              <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center" Spacing="3">
+                <TextBlock Classes="settings-row-title" Text="键盘快捷键" />
+                <TextBlock Classes="settings-row-description" Text="Ctrl+O 打开文件 · Ctrl+F 聚焦搜索 · Esc 关闭浮层 / 退出沉浸" />
+              </StackPanel>
+            </Grid>
+          </Border>
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

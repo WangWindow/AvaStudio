@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <Package Name="AvaStudio"
+           Manufacturer="WangWindow"
+           Version="$(var.AppVersion)"
+           UpgradeCode="F968D097-98DF-4466-8624-5B3A109A6682"
+           Scope="perMachine"
+           Compressed="yes"
+           Codepage="65001"
+           InstallerVersion="500">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of AvaStudio is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="AppIcon" SourceFile="$(var.AppIconPath)" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+
+    <Feature Id="MainFeature" Title="AvaStudio" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentGroupRef Id="Shortcuts" />
+      <ComponentGroupRef Id="FileAssociations" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="AvaStudio" />
+    </StandardDirectory>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(var.AppPublishDir)\**" />
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ShortcutFolder" Name="AvaStudio" />
+    </StandardDirectory>
+
+    <ComponentGroup Id="Shortcuts">
+      <Component Id="StartMenuShortcut" Directory="ShortcutFolder" Guid="*">
+        <Shortcut Id="AppStartMenuShortcut"
+                  Name="AvaStudio"
+                  Target="[INSTALLFOLDER]AvaStudio.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="AppIcon" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\AvaStudio"
+                       Name="Installed"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+        <RemoveFolder Id="RemoveShortcutFolder" On="uninstall" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+
+  <!-- 文件关联：只登记“打开方式”，不抢占系统默认程序。
+       Windows 10+ 的默认应用仍由用户在“设置-应用-默认应用”中确认一次。 -->
+  <Fragment>
+    <ComponentGroup Id="FileAssociations">
+      <!-- ProgId：友好名称、图标与打开命令 -->
+      <Component Id="ProgIdMediaFile" Directory="INSTALLFOLDER" Guid="9C88C7B7-8CB4-4677-BAC1-8D93AA43A67A">
+        <RegistryKey Root="HKLM" Key="Software\Classes\AvaStudio.MediaFile">
+          <RegistryValue Type="string" Value="AvaStudio 媒体文件" KeyPath="yes" />
+          <RegistryKey Key="DefaultIcon">
+            <RegistryValue Type="string" Value="[INSTALLFOLDER]AvaStudio.exe,0" />
+          </RegistryKey>
+          <RegistryKey Key="shell\open\command">
+            <RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]AvaStudio.exe&quot; &quot;%1&quot;" />
+          </RegistryKey>
+        </RegistryKey>
+      </Component>
+
+      <!-- 每个受支持的扩展名登记到 OpenWithProgids（不写默认值，避免接管默认程序） -->
+      <Component Id="MediaOpenWithProgids" Directory="INSTALLFOLDER" Guid="E34E6011-1B84-43FE-8054-436DD0BC29CE">
+        <RegistryKey Root="HKLM" Key="Software\Classes\.mp3\OpenWithProgids">
+          <RegistryValue Name="AvaStudio.MediaFile" Type="string" Value="" KeyPath="yes" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.flac\OpenWithProgids">
+          <RegistryValue Name="AvaStudio.MediaFile" Type="string" Value="" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.wav\OpenWithProgids">
+          <RegistryValue Name="AvaStudio.MediaFile" Type="string" Value="" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.m4a\OpenWithProgids">
+          <RegistryValue Name="AvaStudio.MediaFile" Type="string" Value="" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.aac\OpenWithProgids">
+          <RegistryValue Name="AvaStudio.MediaFile" Type="string" Value="" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.ogg\OpenWithProgids">
+          <RegistryValue Name="AvaStudio.MediaFile" Type="string" Value="" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.opus\OpenWithProgids">
+          <RegistryValue Name="AvaStudio.MediaFile" Type="string" Value="" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.wma\OpenWithProgids">
+          <RegistryValue Name="AvaStudio.MediaFile" Type="string" Value="" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.mp4\OpenWithProgids">
+          <RegistryValue Name="AvaStudio.MediaFile" Type="string" Value="" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.mkv\OpenWithProgids">
+          <RegistryValue Name="AvaStudio.MediaFile" Type="string" Value="" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.mov\OpenWithProgids">
+          <RegistryValue Name="AvaStudio.MediaFile" Type="string" Value="" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.m4v\OpenWithProgids">
+          <RegistryValue Name="AvaStudio.MediaFile" Type="string" Value="" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.avi\OpenWithProgids">
+          <RegistryValue Name="AvaStudio.MediaFile" Type="string" Value="" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.webm\OpenWithProgids">
+          <RegistryValue Name="AvaStudio.MediaFile" Type="string" Value="" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.wmv\OpenWithProgids">
+          <RegistryValue Name="AvaStudio.MediaFile" Type="string" Value="" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.flv\OpenWithProgids">
+          <RegistryValue Name="AvaStudio.MediaFile" Type="string" Value="" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.ts\OpenWithProgids">
+          <RegistryValue Name="AvaStudio.MediaFile" Type="string" Value="" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.m2ts\OpenWithProgids">
+          <RegistryValue Name="AvaStudio.MediaFile" Type="string" Value="" />
+        </RegistryKey>
+      </Component>
+
+      <!-- 应用能力登记：让“默认应用/打开方式”里的 AvaStudio 显示名称、说明、图标与支持的类型 -->
+      <Component Id="AppCapabilities" Directory="INSTALLFOLDER" Guid="FFC233BC-94A8-4D37-88F0-1E1584F2F515">
+        <RegistryKey Root="HKLM" Key="Software\AvaStudio\Capabilities">
+          <RegistryValue Name="ApplicationName" Type="string" Value="AvaStudio" KeyPath="yes" />
+          <RegistryValue Name="ApplicationDescription" Type="string" Value="AvaStudio 媒体播放器" />
+          <RegistryValue Name="ApplicationIcon" Type="string" Value="[INSTALLFOLDER]AvaStudio.exe,0" />
+          <RegistryKey Key="FileAssociations">
+            <RegistryValue Name=".mp3" Type="string" Value="AvaStudio.MediaFile" />
+            <RegistryValue Name=".flac" Type="string" Value="AvaStudio.MediaFile" />
+            <RegistryValue Name=".wav" Type="string" Value="AvaStudio.MediaFile" />
+            <RegistryValue Name=".m4a" Type="string" Value="AvaStudio.MediaFile" />
+            <RegistryValue Name=".aac" Type="string" Value="AvaStudio.MediaFile" />
+            <RegistryValue Name=".ogg" Type="string" Value="AvaStudio.MediaFile" />
+            <RegistryValue Name=".opus" Type="string" Value="AvaStudio.MediaFile" />
+            <RegistryValue Name=".wma" Type="string" Value="AvaStudio.MediaFile" />
+            <RegistryValue Name=".mp4" Type="string" Value="AvaStudio.MediaFile" />
+            <RegistryValue Name=".mkv" Type="string" Value="AvaStudio.MediaFile" />
+            <RegistryValue Name=".mov" Type="string" Value="AvaStudio.MediaFile" />
+            <RegistryValue Name=".m4v" Type="string" Value="AvaStudio.MediaFile" />
+            <RegistryValue Name=".avi" Type="string" Value="AvaStudio.MediaFile" />
+            <RegistryValue Name=".webm" Type="string" Value="AvaStudio.MediaFile" />
+            <RegistryValue Name=".wmv" Type="string" Value="AvaStudio.MediaFile" />
+            <RegistryValue Name=".flv" Type="string" Value="AvaStudio.MediaFile" />
+            <RegistryValue Name=".ts" Type="string" Value="AvaStudio.MediaFile" />
+            <RegistryValue Name=".m2ts" Type="string" Value="AvaStudio.MediaFile" />
+          </RegistryKey>
+        </RegistryKey>
+      </Component>
+
+      <!-- 向系统声明本应用的能力清单位置 -->
+      <Component Id="RegisteredApplication" Directory="INSTALLFOLDER" Guid="A96F3F53-05B6-443C-8E84-C85311E9A4C7">
+        <RegistryKey Root="HKLM" Key="Software\RegisteredApplications">
+          <RegistryValue Name="AvaStudio" Type="string" Value="Software\AvaStudio\Capabilities" KeyPath="yes" />
+        </RegistryKey>
+      </Component>
+
+      <!-- 资源管理器“打开方式”列表：按可执行文件名登记，并声明支持的扩展名 -->
+      <Component Id="AppOpenWithRegistration" Directory="INSTALLFOLDER" Guid="BA6EF8F4-50EE-474C-8455-F82261809548">
+        <RegistryKey Root="HKLM" Key="Software\Classes\Applications\AvaStudio.exe">
+          <RegistryValue Type="string" Value="AvaStudio 媒体文件" KeyPath="yes" />
+          <RegistryKey Key="shell\open\command">
+            <RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]AvaStudio.exe&quot; &quot;%1&quot;" />
+          </RegistryKey>
+          <RegistryKey Key="SupportedTypes">
+            <RegistryValue Name=".mp3" Type="string" Value="" />
+            <RegistryValue Name=".flac" Type="string" Value="" />
+            <RegistryValue Name=".wav" Type="string" Value="" />
+            <RegistryValue Name=".m4a" Type="string" Value="" />
+            <RegistryValue Name=".aac" Type="string" Value="" />
+            <RegistryValue Name=".ogg" Type="string" Value="" />
+            <RegistryValue Name=".opus" Type="string" Value="" />
+            <RegistryValue Name=".wma" Type="string" Value="" />
+            <RegistryValue Name=".mp4" Type="string" Value="" />
+            <RegistryValue Name=".mkv" Type="string" Value="" />
+            <RegistryValue Name=".mov" Type="string" Value="" />
+            <RegistryValue Name=".m4v" Type="string" Value="" />
+            <RegistryValue Name=".avi" Type="string" Value="" />
+            <RegistryValue Name=".webm" Type="string" Value="" />
+            <RegistryValue Name=".wmv" Type="string" Value="" />
+            <RegistryValue Name=".flv" Type="string" Value="" />
+            <RegistryValue Name=".ts" Type="string" Value="" />
+            <RegistryValue Name=".m2ts" Type="string" Value="" />
+          </RegistryKey>
+        </RegistryKey>
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

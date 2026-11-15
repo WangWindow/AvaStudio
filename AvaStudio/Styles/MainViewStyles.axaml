@@ -1,0 +1,483 @@
+<Styles xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- 窄屏桌面/紧凑移动端：只折叠冗余文字，保留操作、提示与自动化名称。 -->
+  <Style Selector="Grid#MainRoot.tight TextBlock.header-action-label">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.tight TextBlock.toolbar-label">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.tight TextBlock.queue-stats">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.tight Border.card-icon">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.tight Button.page-tab">
+    <Setter Property="FontSize" Value="16" />
+  </Style>
+
+  <!-- 外壳底色：非 Mica 时用不透明 Fluent 层；Mica 生效时让出桌面材质。 -->
+  <Style Selector="Grid#MainRoot">
+    <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.mica">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <!-- 内容表面：非 Mica 时比侧边栏亮一档；Mica 时叠加 10% 浅层，让内容区比纯 Mica 的侧边栏更亮。 -->
+  <Style Selector="Border#ContentSurface">
+    <Setter Property="Margin" Value="280,0,0,0" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.mica Border#ContentSurface">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.rail Border#ContentSurface">
+    <Setter Property="Margin" Value="48,0,0,0" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.compact Border#ContentSurface">
+    <Setter Property="Margin" Value="48,0,0,0" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.narrow Border#ContentSurface">
+    <Setter Property="Margin" Value="0" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.immersive Border#ContentSurface">
+    <Setter Property="Margin" Value="0" />
+  </Style>
+
+  <!-- 标题栏返回按钮无历史时禁用。Fluent 的禁用底色会在侧边栏左上角留下
+       32×32 灰块，这里让按钮本身保持透明，只把图标压到 40% 亮度。 -->
+  <Style Selector="Grid#MainRoot Button.icon-tool:disabled">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot Button.icon-tool:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
+
+  <!-- 标题栏透明且自身不参与命中：侧边栏顶部（返回按钮）必须能直接点到。
+       应用图标/名称从内容区左边缘开始，不压在导航面板上。 -->
+  <Style Selector="StackPanel#TitleBarLeft">
+    <Setter Property="Margin" Value="12,0,0,0" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.expanded StackPanel#TitleBarLeft">
+    <Setter Property="Margin" Value="292,0,0,0" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.rail StackPanel#TitleBarLeft">
+    <Setter Property="Margin" Value="60,0,0,0" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.compact StackPanel#TitleBarLeft">
+    <Setter Property="Margin" Value="60,0,0,0" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.narrow StackPanel#TitleBarLeft">
+    <Setter Property="Margin" Value="12,0,0,0" />
+  </Style>
+
+  <!-- 侧边栏返回按钮：展开/抽屉时距左 12，48 窄栏居中。 -->
+  <Style Selector="Button#BackButton">
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="Margin" Value="12,0,0,0" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.rail Button#BackButton">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="0" />
+  </Style>
+
+  <!-- 窄屏抽屉打开时，侧边栏返回按钮占用左上角；隐藏标题栏左簇并把拖动面
+       让到 48 之后，避免汉堡/应用名盖住返回按钮。 -->
+  <Style Selector="Grid#MainRoot.narrow.nav-open StackPanel#TitleBarLeft">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.narrow.nav-open Border#TitleBarDragRegion">
+    <Setter Property="Margin" Value="48,0,0,0" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.window-inactive TextBlock#TitleBarAppName">
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.window-inactive Button.caption">
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+  </Style>
+
+  <!-- 导航面板：贯穿整个外壳高度；展开 280、窄栏 48、紧凑/窄屏浮层 280。
+       非 Mica 时侧边栏用更暗的 ChromeLow；Mica 时透明，只保留原生材质。 -->
+  <Style Selector="Border#NavPanel">
+    <Setter Property="Width" Value="280" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="IsVisible" Value="True" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Width" Duration="0:0:0.16" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Grid#MainRoot.mica Border#NavPanel">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <Style Selector="Grid#PaneHeader">
+    <Setter Property="Height" Value="48" />
+    <Setter Property="Margin" Value="12,0" />
+  </Style>
+
+  <Style Selector="Grid#SearchHost">
+    <Setter Property="Margin" Value="12,0,12,8" />
+  </Style>
+
+  <Style Selector="ListBox#NavigationList">
+    <Setter Property="Margin" Value="12,4,12,0" />
+  </Style>
+
+  <Style Selector="StackPanel#PaneFooter">
+    <Setter Property="Margin" Value="12,8,12,12" />
+  </Style>
+
+  <Style Selector="Grid#ContentHost">
+    <Setter Property="Margin" Value="280,0,0,0" />
+  </Style>
+
+  <Style Selector="Grid#BottomHost">
+    <Setter Property="Margin" Value="296,0,16,12" />
+  </Style>
+
+  <!-- 面板头切换按钮：沿用 WinUI NavigationView 的尺寸。 -->
+  <Style Selector="Button.pane-toggle">
+    <Setter Property="Width" Value="40" />
+    <Setter Property="Height" Value="40" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Button.pane-toggle:pointerover">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+  </Style>
+
+  <Style Selector="Button.pane-toggle:pressed">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListMediumBrush}" />
+  </Style>
+
+  <Style Selector="Button.pane-toggle:focus">
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="TextBox.nav-search">
+    <Setter Property="Height" Value="32" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Padding" Value="30,0,8,0" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="ListBox.nav-list">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+
+  <!-- Navigation typography: 15 DIP; the rail hides labels instead of shrinking. -->
+  <Style Selector="TextBlock.nav-label">
+    <Setter Property="FontSize" Value="15" />
+  </Style>
+
+  <!-- 选中填充由模板绘制，使分组分隔线位于填充之外；容器保持透明，只提供状态。
+       默认文字使用 High，避免侧边栏在深色面板上显得发灰；悬停/选中仍保持 High。 -->
+  <Style Selector="ListBox.nav-list ListBoxItem">
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <ContentPresenter
+          Content="{TemplateBinding Content}"
+          ContentTemplate="{TemplateBinding ContentTemplate}"
+          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="ListBox.nav-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+  </Style>
+
+  <Style Selector="ListBox.nav-list ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListMediumBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+  </Style>
+
+  <Style Selector="ListBox.nav-list ListBoxItem:focus">
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="Button.nav-footer">
+    <Setter Property="Height" Value="40" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <!-- 设置入口与主导航同一亮度，避免页脚文字比上方列表更淡。 -->
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}"
+          BorderBrush="{TemplateBinding BorderBrush}"
+          BorderThickness="{TemplateBinding BorderThickness}"
+          CornerRadius="{TemplateBinding CornerRadius}">
+          <ContentPresenter
+            Content="{TemplateBinding Content}"
+            ContentTemplate="{TemplateBinding ContentTemplate}"
+            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+            VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.nav-footer:pointerover">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+  </Style>
+
+  <Style Selector="Button.nav-footer.active">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListMediumBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+  </Style>
+
+  <Style Selector="Button.nav-footer:focus">
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <!-- 窄栏：展开模式收起面板，或紧凑显示模式。 -->
+  <Style Selector="Grid#MainRoot.rail Border#NavPanel">
+    <Setter Property="Width" Value="48" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.rail Grid#PaneHeader">
+    <Setter Property="Margin" Value="3,0" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.rail Grid#SearchHost">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <!-- 48 窄栏：列表左右各留 4，条目 40×40，图标中心正好落在 24。 -->
+  <Style Selector="Grid#MainRoot.rail ListBox#NavigationList">
+    <Setter Property="Margin" Value="4,4,4,0" />
+    <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Hidden" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.rail StackPanel#PaneFooter">
+    <Setter Property="Margin" Value="4,8,4,12" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.rail Button.pane-toggle">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.rail TextBlock#NavLabel">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <!-- 窄栏不显示 3 DIP 选中竖线，否则会把图标和选中面挤偏。 -->
+  <Style Selector="Grid#MainRoot.rail Border#NavActiveIndicator">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.rail Border#NavIconHost">
+    <Setter Property="Grid.Column" Value="0" />
+    <Setter Property="Grid.ColumnSpan" Value="3" />
+    <Setter Property="Width" Value="32" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.rail Border#NavSeparator">
+    <Setter Property="Margin" Value="8,7" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.rail TextBlock#SettingsLabel">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.rail Border#SettingsIndicator">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.rail Border#SettingsIconHost">
+    <Setter Property="Grid.Column" Value="0" />
+    <Setter Property="Grid.ColumnSpan" Value="3" />
+    <Setter Property="Width" Value="32" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.rail Grid#ContentHost">
+    <Setter Property="Margin" Value="48,0,0,0" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.rail Grid#BottomHost">
+    <Setter Property="Margin" Value="64,0,12,10" />
+  </Style>
+
+  <!-- 紧凑模式即使打开浮层，内容也保持 48 边距；浮层只覆盖、不推动内容。 -->
+  <Style Selector="Grid#MainRoot.compact Grid#ContentHost">
+    <Setter Property="Margin" Value="48,0,0,0" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.compact Grid#BottomHost">
+    <Setter Property="Margin" Value="64,0,12,10" />
+  </Style>
+
+  <!-- 窄屏/最小模式：导航面板只作为 280 宽的覆盖抽屉出现。 -->
+  <Style Selector="Grid#MainRoot.narrow Border#NavPanel">
+    <Setter Property="Width" Value="280" />
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.narrow Grid#ContentHost">
+    <Setter Property="Margin" Value="0" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.narrow Grid#BottomHost">
+    <Setter Property="Margin" Value="16,0,16,10" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.narrow Button#PaneToggleButton">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <!-- 窄屏用标题栏汉堡，抽屉里不再保留空的面板头行。 -->
+  <Style Selector="Grid#MainRoot.narrow Grid#PaneHeader">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <!-- 覆盖抽屉（紧凑/窄屏）：为可读性使用不透明 Fluent 层，因为它盖在页面内容上。 -->
+  <Style Selector="Grid#MainRoot.compact.nav-open Border#NavPanel">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.narrow.nav-open Border#NavPanel">
+    <Setter Property="IsVisible" Value="True" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+  </Style>
+
+  <Style Selector="Button#NavToggleButton">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.narrow Button#NavToggleButton">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+
+  <Style Selector="Button#NavigationScrim">
+    <Setter Property="IsVisible" Value="False" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Grid#MainRoot.nav-open Button#NavigationScrim">
+    <Setter Property="IsVisible" Value="True" />
+    <Setter Property="Opacity" Value="0.72" />
+  </Style>
+
+  <!-- 页面切换：只对新页面做 160ms 淡入 + 8px 上移（纯渲染动画，不触发布局）。 -->
+  <Style Selector="Grid#PageLayer UserControl.page-view">
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <!-- 音频沉浸层 170ms 淡入/缩放。 -->
+  <Style Selector="Border#ImmersiveLayer">
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.17" />
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.17" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <!-- 沉浸播放：标题行由 code-behind 归零；这里隐藏导航并让内容/播放条占满宽度。 -->
+  <Style Selector="Grid#MainRoot.immersive Border#NavPanel">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.immersive Grid#ContentHost">
+    <Setter Property="Margin" Value="0" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.immersive Grid#BottomHost">
+    <Setter Property="Margin" Value="16,0,16,12" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.immersive Button#NavigationScrim">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.immersive Grid#ResizeGrips">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <!-- 视频沉浸保留标题栏与窗口边框：标题栏用实体表面，窗口仍可拖动、缩放和 Snap。 -->
+  <Style Selector="Grid#MainRoot.video-immersive Border#TitleBarStrip">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.video-immersive Grid#ResizeGrips">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+</Styles>

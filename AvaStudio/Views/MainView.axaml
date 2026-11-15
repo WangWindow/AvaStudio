@@ -2,18 +2,463 @@
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:chrome="using:Avalonia.Controls.Chrome"
+  xmlns:fi="using:FluentIcons.Avalonia"
   xmlns:vm="using:AvaStudio.ViewModels"
-  mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+  xmlns:views="using:AvaStudio.Views"
+  mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="720"
   x:Class="AvaStudio.Views.MainView"
-  x:DataType="vm:MainViewModel">
-  <Design.DataContext>
-    <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at
-        App.axaml.cs) -->
-    <vm:MainViewModel />
-  </Design.DataContext>
+  x:DataType="vm:MainViewModel"
+  x:CompileBindings="True">
 
-  <TextBox Text="{Binding Greeting}"
-    HorizontalAlignment="Center"
-    VerticalAlignment="Center" />
+  <UserControl.Styles>
+    <StyleInclude Source="avares://AvaStudio/Styles/WindowChromeStyles.axaml" />
+    <StyleInclude Source="avares://AvaStudio/Styles/MainViewStyles.axaml" />
+  </UserControl.Styles>
+
+  <Grid x:Name="MainRoot" Classes="expanded" ClipToBounds="True">
+    <Grid x:Name="ShellGrid" RowDefinitions="48,*,Auto">
+
+      <!-- 内容表面：位于标题栏、导航和内容之下，只给右侧内容区一层比侧边栏更亮的底色。 -->
+      <Border x:Name="ContentSurface"
+        Grid.Row="0"
+        Grid.RowSpan="3"
+        ZIndex="0"
+        IsHitTestVisible="False" />
+
+      <!-- 透明标题栏：左侧透出导航面板的 Mica，右侧透出更亮的内容表面；整条都在面板之上。 -->
+      <Border x:Name="TitleBarStrip" Grid.Row="0" ZIndex="3">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <StackPanel x:Name="TitleBarLeft"
+            Orientation="Horizontal"
+            Spacing="6"
+            VerticalAlignment="Center"
+            IsVisible="{Binding !IsImmersiveVideo}">
+            <!-- 窄屏汉堡；展开/紧凑模式使用导航面板头的按钮。 -->
+            <Button x:Name="NavToggleButton"
+              Classes="icon-tool"
+              chrome:WindowDecorationProperties.ElementRole="User"
+              Click="OnNavigationToggleClick"
+              AutomationProperties.Name="打开导航菜单"
+              ToolTip.Tip="打开导航菜单（Ctrl+E）">
+              <fi:SymbolIcon Symbol="Navigation" FontSize="16" />
+            </Button>
+
+            <fi:SymbolIcon Symbol="Play"
+              FontSize="16"
+              Margin="2,0,0,0"
+              Foreground="{DynamicResource SystemControlHighlightAccentBrush}"
+              VerticalAlignment="Center" />
+            <TextBlock x:Name="TitleBarAppName"
+              Text="AvaStudio"
+              FontSize="12.5"
+              FontWeight="SemiBold"
+              VerticalAlignment="Center" />
+          </StackPanel>
+
+          <!-- 视频沉浸标题栏：保留窗口拖动与右侧窗口按钮，只把应用名换成退出和片名。 -->
+          <StackPanel x:Name="VideoTitleBarLeft"
+            Orientation="Horizontal"
+            Spacing="8"
+            Margin="12,0,0,0"
+            VerticalAlignment="Center"
+            IsVisible="{Binding IsImmersiveVideo}">
+            <Button Classes="icon-tool"
+              Command="{Binding PlayerBar.ToggleImmersiveCommand}"
+              chrome:WindowDecorationProperties.ElementRole="User"
+              AutomationProperties.Name="退出视频播放"
+              ToolTip.Tip="退出视频播放（Esc）">
+              <fi:SymbolIcon Symbol="ChevronDown" FontSize="18" />
+            </Button>
+
+            <fi:SymbolIcon Symbol="Video"
+              FontSize="16"
+              Foreground="{DynamicResource SystemControlHighlightAccentBrush}"
+              VerticalAlignment="Center" />
+
+            <TextBlock Text="{Binding PlayerBar.Title}"
+              MaxWidth="520"
+              FontSize="13"
+              FontWeight="SemiBold"
+              Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+              TextTrimming="CharacterEllipsis"
+              VerticalAlignment="Center" />
+          </StackPanel>
+
+          <!-- 中间空白区域是唯一的 Win32 拖动面；控件留在客户区内。 -->
+          <Border x:Name="TitleBarDragRegion"
+            Grid.Column="1"
+            Background="Transparent"
+            chrome:WindowDecorationProperties.ElementRole="TitleBar"
+            DoubleTapped="OnTitleBarDoubleTapped" />
+
+          <StackPanel Grid.Column="2"
+            Orientation="Horizontal"
+            VerticalAlignment="Stretch"
+            chrome:WindowDecorationProperties.ElementRole="User">
+            <Button Classes="icon-tool"
+              Margin="0,0,6,0"
+              VerticalAlignment="Center"
+              chrome:WindowDecorationProperties.ElementRole="User"
+              Command="{Binding OpenFilesCommand}"
+              AutomationProperties.Name="打开文件"
+              ToolTip.Tip="打开文件（Ctrl+O）">
+              <fi:SymbolIcon Symbol="FolderOpen" FontSize="15" />
+            </Button>
+
+            <Button x:Name="MinimizeButton"
+              Classes="caption"
+              chrome:WindowDecorationProperties.ElementRole="MinimizeButton"
+              Focusable="False"
+              IsTabStop="False"
+              Click="OnMinimizeClick"
+              AutomationProperties.Name="最小化">
+              <Path Width="10" Height="10"
+                Stroke="{Binding $parent[Button].Foreground}"
+                StrokeThickness="1"
+                Data="M0.5,5.5 L9.5,5.5" />
+            </Button>
+
+            <Button x:Name="MaximizeButton"
+              Classes="caption"
+              chrome:WindowDecorationProperties.ElementRole="MaximizeButton"
+              Focusable="False"
+              IsTabStop="False"
+              Click="OnMaximizeClick"
+              AutomationProperties.Name="最大化">
+              <Path x:Name="MaximizeGlyph"
+                Width="10"
+                Height="10"
+                Stroke="{Binding $parent[Button].Foreground}"
+                StrokeThickness="1"
+                Data="M0.5,0.5 L9.5,0.5 L9.5,9.5 L0.5,9.5 Z" />
+            </Button>
+
+            <Button x:Name="CloseButton"
+              Classes="caption close"
+              chrome:WindowDecorationProperties.ElementRole="CloseButton"
+              Focusable="False"
+              IsTabStop="False"
+              Click="OnCloseClick"
+              AutomationProperties.Name="关闭">
+              <Path Width="10" Height="10"
+                Stroke="{Binding $parent[Button].Foreground}"
+                StrokeThickness="1"
+                Data="M0.5,0.5 L9.5,9.5 M9.5,0.5 L0.5,9.5" />
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- 导航面板贯穿标题栏、内容与底栏行，作为整个外壳的左侧表面；
+           标题栏绘制在它上面，内层用 48 高垫片让出标题栏。 -->
+      <Border x:Name="NavPanel"
+        Grid.Row="0"
+        Grid.RowSpan="3"
+        ZIndex="2"
+        HorizontalAlignment="Left"
+        VerticalAlignment="Stretch"
+        BorderBrush="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+        BorderThickness="0,0,1,0">
+        <Grid RowDefinitions="48,Auto,Auto,*,Auto">
+          <!-- 面板顶部 48 高条：返回按钮始终在侧边栏里；右侧由标题栏的应用名占用。 -->
+          <Grid Grid.Row="0" x:Name="PaneTopStrip">
+            <Button x:Name="BackButton"
+              Classes="icon-tool"
+              VerticalAlignment="Center"
+              IsEnabled="{Binding CanGoBack}"
+              Command="{Binding GoBackCommand}"
+              AutomationProperties.Name="返回"
+              ToolTip.Tip="返回（Alt+←）">
+              <fi:SymbolIcon Symbol="ArrowLeft" FontSize="16" />
+            </Button>
+          </Grid>
+
+          <!-- 面板头：40×40 折叠/展开按钮，展开模式收成 48 窄栏，紧凑/窄屏打开浮层。 -->
+          <Grid Grid.Row="1" x:Name="PaneHeader">
+            <Button x:Name="PaneToggleButton"
+              Classes="pane-toggle"
+              Click="OnPaneToggleClick"
+              AutomationProperties.Name="打开或关闭导航菜单"
+              ToolTip.Tip="收起导航菜单（Ctrl+E）">
+              <fi:SymbolIcon Symbol="Navigation" FontSize="16" />
+            </Button>
+          </Grid>
+
+          <Grid x:Name="SearchHost" Grid.Row="2" Height="32">
+            <TextBox x:Name="SearchBox"
+              Classes="nav-search"
+              Text="{Binding SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+              PlaceholderText="搜索"
+              AutomationProperties.Name="搜索"
+              KeyDown="OnSearchBoxKeyDown" />
+            <fi:SymbolIcon Symbol="Search"
+              FontSize="14"
+              Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+              HorizontalAlignment="Left"
+              VerticalAlignment="Center"
+              Margin="10,0,0,0"
+              IsHitTestVisible="False" />
+          </Grid>
+
+          <ListBox x:Name="NavigationList"
+            Grid.Row="3"
+            Classes="nav-list"
+            ItemsSource="{Binding NavigationItems}"
+            SelectedItem="{Binding SelectedNavigationItem, Mode=TwoWay}"
+            AutomationProperties.Name="主导航"
+            KeyDown="OnNavigationListKeyDown">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:NavigationItem">
+                <StackPanel>
+                  <!-- 分组分隔线画在选中填充之外，避免选中时被填充包住。 -->
+                  <Border x:Name="NavSeparator"
+                    Height="1"
+                    Margin="12,7"
+                    Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                    IsVisible="{Binding ShowSeparator}" />
+
+                  <Border x:Name="NavItemSurface"
+                    Height="40"
+                    CornerRadius="4"
+                    ToolTip.Tip="{Binding Label}"
+                    Background="{Binding $parent[ListBoxItem].Background}"
+                    BorderBrush="{Binding $parent[ListBoxItem].BorderBrush}"
+                    BorderThickness="{Binding $parent[ListBoxItem].BorderThickness}">
+                    <Grid ColumnDefinitions="3,32,*" AutomationProperties.Name="{Binding Label}">
+                      <Border x:Name="NavActiveIndicator"
+                        Width="3"
+                        Height="16"
+                        CornerRadius="1.5"
+                        Background="{DynamicResource SystemControlHighlightAccentBrush}"
+                        IsVisible="{Binding $parent[ListBoxItem].IsSelected}"
+                        VerticalAlignment="Center" />
+                      <Border x:Name="NavIconHost"
+                        Grid.Column="1"
+                        Width="32"
+                        HorizontalAlignment="Left">
+                        <fi:SymbolIcon Symbol="{Binding Icon}"
+                          FontSize="16"
+                          Foreground="{Binding $parent[ListBoxItem].Foreground}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center" />
+                      </Border>
+                      <TextBlock x:Name="NavLabel"
+                        Classes="nav-label"
+                        Grid.Column="2"
+                        Text="{Binding Label}"
+                        Margin="2,0,8,0"
+                        VerticalAlignment="Center"
+                        TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                  </Border>
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <StackPanel Grid.Row="4" x:Name="PaneFooter">
+            <Border Classes="divider" Margin="0,0,0,8" />
+            <Button x:Name="SettingsNavButton"
+              Classes="nav-footer"
+              Classes.active="{Binding IsSettingsSelected}"
+              Command="{Binding OpenSettingsCommand}"
+              AutomationProperties.Name="设置"
+              ToolTip.Tip="设置">
+              <Grid ColumnDefinitions="3,32,*" Height="40">
+                <Border x:Name="SettingsIndicator"
+                  Width="3"
+                  Height="16"
+                  CornerRadius="1.5"
+                  Background="{DynamicResource SystemControlHighlightAccentBrush}"
+                  IsVisible="{Binding IsSettingsSelected}"
+                  VerticalAlignment="Center" />
+                <Border x:Name="SettingsIconHost"
+                  Grid.Column="1"
+                  Width="32"
+                  HorizontalAlignment="Left">
+                  <fi:SymbolIcon Symbol="Settings"
+                    FontSize="16"
+                    Foreground="{Binding $parent[Button].Foreground}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center" />
+                </Border>
+                <TextBlock x:Name="SettingsLabel"
+                  Classes="nav-label"
+                  Grid.Column="2"
+                  Text="设置"
+                  Margin="2,0,8,0"
+                  VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Grid Grid.Row="1" x:Name="BodyRoot" ClipToBounds="False">
+        <Grid x:Name="ContentHost" ZIndex="0" Background="Transparent" ClipToBounds="True">
+          <!-- 缓存的页面视图层：每个页面只创建一次，切换时只改可见性。 -->
+          <Grid x:Name="PageLayer" ZIndex="0" Background="Transparent" />
+
+          <!-- 原生视频表面：始终留在可视树中（只改尺寸，不隐藏），
+               这样窗口句柄不会随页面切换被销毁。默认缩到右下角 1×1。 -->
+          <ContentControl x:Name="VideoHost"
+            ZIndex="3"
+            Width="1"
+            Height="1"
+            Background="Black"
+            ClipToBounds="True"
+            HorizontalContentAlignment="Stretch"
+            VerticalContentAlignment="Stretch"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            IsHitTestVisible="False" />
+
+          <!-- 音频沉浸层：覆盖内容区但不盖住底部播放条；淡入/缩放由 code-behind 控制。 -->
+          <Border x:Name="ImmersiveLayer"
+            ZIndex="4"
+            IsVisible="False"
+            Background="Transparent"
+            ClipToBounds="True">
+            <views:ImmersivePlayerView DataContext="{Binding PlayerBar}" />
+          </Border>
+        </Grid>
+
+        <Button x:Name="NavigationScrim"
+          ZIndex="1"
+          BorderThickness="0"
+          Padding="0"
+          HorizontalAlignment="Stretch"
+          VerticalAlignment="Stretch"
+          Focusable="False"
+          IsTabStop="False"
+          Click="OnNavigationScrimClick"
+          AutomationProperties.Name="关闭导航" />
+      </Grid>
+
+      <Grid Grid.Row="2" x:Name="BottomHost">
+        <StackPanel Spacing="8">
+          <Border IsVisible="{Binding IsStatusVisible}"
+            MinHeight="40"
+            Padding="10,0"
+            CornerRadius="4"
+            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+            BorderBrush="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+            BorderThickness="1">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+              <fi:SymbolIcon Symbol="Info"
+                FontSize="14"
+                Foreground="{DynamicResource SystemControlHighlightAccentBrush}"
+                VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1"
+                Text="{Binding StatusMessage}"
+                Margin="8,0,12,0"
+                FontSize="12.5"
+                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                VerticalAlignment="Center"
+                TextTrimming="CharacterEllipsis" />
+              <HyperlinkButton Grid.Column="2"
+                Content="查看播放队列"
+                FontSize="12"
+                VerticalAlignment="Center"
+                IsVisible="{Binding IsStatusQueueActionVisible}"
+                Command="{Binding GoToQueueCommand}" />
+              <Button Grid.Column="3"
+                Classes="icon-tool"
+                Width="24"
+                Height="24"
+                Margin="6,0,0,0"
+                Command="{Binding DismissStatusCommand}"
+                AutomationProperties.Name="关闭提示"
+                ToolTip.Tip="关闭提示">
+                <fi:SymbolIcon Symbol="Dismiss" FontSize="10" />
+              </Button>
+            </Grid>
+          </Border>
+
+          <views:PlayerBarView DataContext="{Binding PlayerBar}" />
+        </StackPanel>
+      </Grid>
+    </Grid>
+
+    <!-- 视频沉浸底部控制：独立 Popup 作为拥有窗口，显示在原生视频子窗口之上。
+         控件全部不抢焦点，Esc 仍由 MainView 处理。 -->
+    <Popup x:Name="VideoStageControlsPopup"
+      PlacementTarget="{Binding #VideoHost}"
+      Placement="AnchorAndGravity"
+      PlacementAnchor="BottomLeft"
+      PlacementGravity="BottomLeft"
+      PlacementConstraintAdjustment="SlideX,SlideY"
+      HorizontalOffset="0"
+      VerticalOffset="0"
+      Width="{Binding #VideoHost.Bounds.Width}"
+      IsLightDismissEnabled="False"
+      WindowManagerAddShadowHint="False"
+      IsOpen="{Binding IsImmersiveVideo}">
+      <views:VideoStageControlsView DataContext="{Binding PlayerBar}" />
+    </Popup>
+
+    <!-- 无边框窗口的缩放握把；每条边都标记对应的 Win32 非客户区角色。 -->
+    <Grid x:Name="ResizeGrips" ZIndex="50">
+      <Border Width="4" HorizontalAlignment="Left" VerticalAlignment="Stretch"
+        Background="Transparent"
+        chrome:WindowDecorationProperties.ElementRole="ResizeW" />
+      <Border Width="4" HorizontalAlignment="Right" VerticalAlignment="Stretch"
+        Background="Transparent"
+        chrome:WindowDecorationProperties.ElementRole="ResizeE" />
+      <Border Height="4" HorizontalAlignment="Stretch" VerticalAlignment="Top"
+        Margin="0,0,135,0"
+        Background="Transparent"
+        chrome:WindowDecorationProperties.ElementRole="ResizeN" />
+      <Border Height="4" HorizontalAlignment="Stretch" VerticalAlignment="Bottom"
+        Background="Transparent"
+        chrome:WindowDecorationProperties.ElementRole="ResizeS" />
+      <Border Width="8" Height="8" HorizontalAlignment="Left" VerticalAlignment="Top"
+        Background="Transparent"
+        chrome:WindowDecorationProperties.ElementRole="ResizeNW" />
+      <Border Width="8" Height="8" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+        Background="Transparent"
+        chrome:WindowDecorationProperties.ElementRole="ResizeSW" />
+      <Border Width="8" Height="8" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+        Background="Transparent"
+        chrome:WindowDecorationProperties.ElementRole="ResizeSE" />
+    </Grid>
+
+    <Border x:Name="DropOverlay"
+      ZIndex="100"
+      IsVisible="False"
+      Background="Transparent"
+      IsHitTestVisible="False">
+      <Grid Margin="20">
+        <Rectangle Stroke="{DynamicResource SystemControlHighlightAccentBrush}"
+          StrokeThickness="2"
+          StrokeDashArray="6,4"
+          RadiusX="8"
+          RadiusY="8" />
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="0">
+          <Border Width="56" Height="56"
+            CornerRadius="14"
+            Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+            HorizontalAlignment="Center">
+            <fi:SymbolIcon Symbol="FolderOpen"
+              FontSize="24"
+              Foreground="{DynamicResource SystemControlHighlightAccentBrush}"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center" />
+          </Border>
+          <TextBlock Text="松开以添加文件"
+            Margin="0,16,0,0"
+            FontSize="20"
+            FontWeight="SemiBold"
+            HorizontalAlignment="Center"
+            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+          <TextBlock Text="视频和音频会加入播放队列"
+            Margin="0,6,0,0"
+            FontSize="13"
+            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+            HorizontalAlignment="Center" />
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
 </UserControl>

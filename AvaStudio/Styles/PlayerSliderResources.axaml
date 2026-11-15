@@ -1,0 +1,92 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- 播放条与沉浸页共用同一套滑杆外观。两个使用场景都包在深色 ThemeVariantScope 里，
+       所以非活动轨直接使用固定的 35% 白，避免浅色主题刷子在深色表面上“消失”。 -->
+  <SolidColorBrush x:Key="PlayerSliderTrackBrush" Color="#59FFFFFF" />
+  <SolidColorBrush x:Key="PlayerSliderThumbBrush" Color="#FFFFFFFF" />
+  <SolidColorBrush x:Key="PlayerSliderThumbBorderBrush" Color="#33000000" />
+
+  <!-- 轨道按钮自己绘制轴线：高度落在按钮上，即使内容测量为 0 也能看到 4 DIP 细线。
+       悬停时只把指针所在的一侧长到 6 DIP，视觉上像轴线被轻轻托起。 -->
+  <ControlTheme x:Key="PlayerSliderTrackButtonTheme" TargetType="RepeatButton">
+    <Setter Property="Height" Value="20" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border x:Name="PART_TrackLine"
+          VerticalAlignment="Center"
+          CornerRadius="2"
+          Background="{TemplateBinding Background}">
+          <Border.Transitions>
+            <Transitions>
+              <DoubleTransition Property="Height" Duration="0:0:0.12" />
+            </Transitions>
+          </Border.Transitions>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+
+    <Style Selector="^ /template/ Border#PART_TrackLine">
+      <Setter Property="Height" Value="4" />
+    </Style>
+    <Style Selector="^:pointerover /template/ Border#PART_TrackLine">
+      <Setter Property="Height" Value="6" />
+    </Style>
+  </ControlTheme>
+
+  <!-- 拇指：14 DIP 白点；尺寸的 14→16 放大由 PlayerStyles 控制，按下时切到强调色。 -->
+  <ControlTheme x:Key="PlayerSliderThumbTheme" TargetType="Thumb">
+    <Setter Property="Width" Value="14" />
+    <Setter Property="Height" Value="14" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border x:Name="PART_ThumbBall"
+          Background="{StaticResource PlayerSliderThumbBrush}"
+          BorderBrush="{StaticResource PlayerSliderThumbBorderBrush}"
+          BorderThickness="1"
+          CornerRadius="8"
+          BoxShadow="0 1 4 0 #66000000" />
+      </ControlTemplate>
+    </Setter>
+
+    <Style Selector="^:pointerover /template/ Border#PART_ThumbBall">
+      <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+      <Setter Property="BorderBrush" Value="#66FFFFFF" />
+    </Style>
+    <Style Selector="^:pressed /template/ Border#PART_ThumbBall">
+      <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+      <Setter Property="BorderBrush" Value="#99FFFFFF" />
+    </Style>
+  </ControlTheme>
+
+  <ControlTemplate x:Key="PlayerSliderTemplate" TargetType="Slider">
+    <Grid Background="Transparent">
+      <Track x:Name="PART_Track"
+        Minimum="{TemplateBinding Minimum}"
+        Maximum="{TemplateBinding Maximum}"
+        Value="{TemplateBinding Value}"
+        Orientation="{TemplateBinding Orientation}"
+        IsDirectionReversed="{TemplateBinding IsDirectionReversed}">
+        <Track.DecreaseButton>
+          <RepeatButton x:Name="PART_DecreaseButton"
+            Theme="{StaticResource PlayerSliderTrackButtonTheme}"
+            Background="{DynamicResource SystemControlHighlightAccentBrush}" />
+        </Track.DecreaseButton>
+
+        <Track.IncreaseButton>
+          <RepeatButton x:Name="PART_IncreaseButton"
+            Theme="{StaticResource PlayerSliderTrackButtonTheme}"
+            Background="{StaticResource PlayerSliderTrackBrush}" />
+        </Track.IncreaseButton>
+
+        <Thumb x:Name="PART_Thumb"
+          Theme="{StaticResource PlayerSliderThumbTheme}" />
+      </Track>
+    </Grid>
+  </ControlTemplate>
+</ResourceDictionary>

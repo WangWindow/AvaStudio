@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:pages="using:AvaStudio.ViewModels.Pages"
+  xmlns:controls="using:AvaStudio.Views.Controls"
+  mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+  x:Class="AvaStudio.Views.Pages.NetworkPageView"
+  x:DataType="pages:NetworkPageViewModel"
+  x:CompileBindings="True">
+  <UserControl.Styles>
+    <StyleInclude Source="avares://AvaStudio/Styles/PageStyles.axaml" />
+    <StyleInclude Source="avares://AvaStudio/Styles/LibraryStyles.axaml" />
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,*">
+    <Grid Grid.Row="0" Margin="40,24,40,0" RowDefinitions="Auto,Auto">
+      <StackPanel Spacing="4">
+        <TextBlock Classes="page-title" Text="媒体服务器" />
+        <TextBlock Classes="page-subtitle" Text="浏览网络中的媒体设备。" />
+      </StackPanel>
+      <Border Grid.Row="1" Classes="divider" Margin="0,16,0,0" />
+    </Grid>
+
+    <!-- 空状态：与 Screenbox 一致的横向 ContentUnavailableView。 -->
+    <controls:EmptyStateView Grid.Row="1"
+      Margin="40,0,40,32"
+      Symbol="Server"
+      Title="没有可用的网络设备"
+      Description="找不到您的媒体？请确保设备已在系统设置中配对。"
+      PrimaryText="打开已连接的设备设置"
+      PrimaryIcon="PlugConnected"
+      PrimaryCommand="{Binding OpenDeviceSettingsCommand}"
+      ShowPrimary="True"
+      ShowSecondary="False" />
+  </Grid>
+</UserControl>

@@ -1,0 +1,135 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:fi="using:FluentIcons.Avalonia"
+  xmlns:pages="using:AvaStudio.ViewModels.Pages"
+  xmlns:vm="using:AvaStudio.ViewModels"
+  xmlns:controls="using:AvaStudio.Views.Controls"
+  mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+  x:Class="AvaStudio.Views.Pages.HomePageView"
+  x:DataType="pages:HomePageViewModel"
+  x:CompileBindings="True">
+  <UserControl.Styles>
+    <StyleInclude Source="avares://AvaStudio/Styles/PageStyles.axaml" />
+    <StyleInclude Source="avares://AvaStudio/Styles/LibraryStyles.axaml" />
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,*">
+    <Grid Grid.Row="0" Margin="40,24,40,0" RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
+      <StackPanel Spacing="3">
+        <TextBlock Classes="page-title" Text="主页" />
+        <TextBlock Classes="page-subtitle" Text="{Binding LibrarySummary}" />
+      </StackPanel>
+
+      <SplitButton Grid.Column="1"
+        Classes="page-action"
+        VerticalAlignment="Top"
+        Command="{Binding OpenFilesCommand}"
+        AutomationProperties.Name="打开文件"
+        ToolTip.Tip="打开媒体文件（Ctrl+O）">
+        <SplitButton.Content>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <fi:SymbolIcon Symbol="FolderOpen" FontSize="15" />
+            <TextBlock Classes="header-action-label" Text="打开文件" VerticalAlignment="Center" />
+          </StackPanel>
+        </SplitButton.Content>
+        <SplitButton.Flyout>
+          <MenuFlyout Placement="BottomEdgeAlignedRight">
+            <MenuItem Header="打开文件…" Command="{Binding OpenFilesCommand}" />
+            <MenuItem Header="打开文件夹…" Command="{Binding OpenFolderCommand}" />
+          </MenuFlyout>
+        </SplitButton.Flyout>
+      </SplitButton>
+
+      <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="divider" Margin="0,16,0,0" />
+    </Grid>
+
+    <!-- 有最近项目：最近区块随页面滚动。 -->
+    <ScrollViewer Grid.Row="1"
+      IsVisible="{Binding HasRecent}"
+      VerticalScrollBarVisibility="Auto"
+      HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Margin="40,20,40,40">
+        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+          <TextBlock Classes="section-label" Text="最近" />
+          <TextBlock Grid.Column="1"
+            Classes="tertiary"
+            Text="{Binding RecentCountText}"
+            VerticalAlignment="Center" />
+        </Grid>
+
+        <ItemsControl ItemsSource="{Binding RecentItems}" HorizontalAlignment="Stretch">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Orientation="Horizontal" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:MediaItemViewModel">
+              <Button Classes="library-card"
+                Width="172"
+                Margin="0,0,12,16"
+                Command="{Binding PlayCommand}"
+                AutomationProperties.Name="{Binding Title}"
+                ToolTip.Tip="播放">
+                <StackPanel>
+                  <Grid Width="160" Height="160">
+                    <Border Classes="artwork-frame">
+                      <Grid>
+                        <fi:SymbolIcon Symbol="{Binding KindSymbol}"
+                          FontSize="32"
+                          Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center" />
+                        <Image Source="{Binding Artwork}"
+                          IsVisible="{Binding HasArtwork}"
+                          Width="160"
+                          Height="160"
+                          Stretch="UniformToFill" />
+                      </Grid>
+                    </Border>
+
+                    <Border Classes="play-badge">
+                      <fi:SymbolIcon Symbol="Play"
+                        FontSize="13"
+                        Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center" />
+                    </Border>
+                  </Grid>
+
+                  <TextBlock Classes="card-title"
+                    Text="{Binding Title}"
+                    Margin="0,8,0,0" />
+                  <TextBlock Classes="card-subtitle"
+                    Text="{Binding Subtitle}"
+                    Margin="0,2,0,0" />
+                  <TextBlock Classes="tertiary"
+                    Text="{Binding DurationText}"
+                    Margin="0,2,0,0" />
+                </StackPanel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- 空状态：与 Screenbox 一致的横向 ContentUnavailableView。 -->
+    <controls:EmptyStateView Grid.Row="1"
+      IsVisible="{Binding IsEmpty}"
+      Margin="40,0,40,32"
+      Symbol="FolderOpen"
+      Title="欢迎使用 AvaStudio"
+      Description="打开文件或文件夹，将媒体内容加入播放队列；最近打开的项目会显示在这里。"
+      PrimaryText="打开文件"
+      PrimaryIcon="FolderOpen"
+      PrimaryCommand="{Binding OpenFilesCommand}"
+      SecondaryText="打开文件夹"
+      SecondaryIcon="Folder"
+      SecondaryCommand="{Binding OpenFolderCommand}"
+      ShowPrimary="True"
+      ShowSecondary="True" />
+  </Grid>
+</UserControl>

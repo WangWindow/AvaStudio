@@ -1,0 +1,13 @@
+<Project Sdk="WixToolset.Sdk/7.0.0">
+  <PropertyGroup>
+    <AcceptEula>wix7</AcceptEula>
+    <InstallerPlatform Condition="'$(InstallerPlatform)' == ''">x64</InstallerPlatform>
+    <!-- 应用图标：供 ARPPRODUCTICON 与开始菜单快捷方式使用 -->
+    <AppIconPath>$(MSBuildThisFileDirectory)..\..\AvaStudio\Assets\Icon.ico</AppIconPath>
+    <DefineConstants>AppPublishDir=$(AppPublishDir);AppVersion=$(AppVersion);AppIconPath=$(AppIconPath)</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" />
+  </ItemGroup>
+</Project>

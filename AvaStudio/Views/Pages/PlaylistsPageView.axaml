@@ -1,0 +1,279 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:controls="using:AvaStudio.Views.Controls"
+  xmlns:fi="using:FluentIcons.Avalonia"
+  xmlns:items="using:AvaStudio.ViewModels.Items"
+  xmlns:pages="using:AvaStudio.ViewModels.Pages"
+  xmlns:vm="using:AvaStudio.ViewModels"
+  mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+  x:Class="AvaStudio.Views.Pages.PlaylistsPageView"
+  x:DataType="pages:PlaylistsPageViewModel"
+  x:CompileBindings="True">
+  <UserControl.Styles>
+    <StyleInclude Source="avares://AvaStudio/Styles/PageStyles.axaml" />
+    <StyleInclude Source="avares://AvaStudio/Styles/ListStyles.axaml" />
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,Auto,*">
+    <!-- 页头：列表和详情共用一条分割线，只切换左侧内容。 -->
+    <Grid Grid.Row="0" Margin="40,24,40,0" RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
+      <TextBlock Classes="page-title"
+        Text="播放列表"
+        IsVisible="{Binding !IsDetailOpen}" />
+
+      <Button Grid.Column="1"
+        Classes="page-action"
+        VerticalAlignment="Center"
+        Command="{Binding BeginCreatePlaylistCommand}"
+        IsVisible="{Binding !IsDetailOpen}"
+        AutomationProperties.Name="新建播放列表"
+        ToolTip.Tip="创建新的播放列表">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <fi:SymbolIcon Symbol="Add" FontSize="15" />
+          <TextBlock Classes="header-action-label" Text="新建播放列表" VerticalAlignment="Center" />
+        </StackPanel>
+      </Button>
+
+      <Grid Grid.ColumnSpan="2" IsVisible="{Binding IsDetailOpen}" ColumnDefinitions="Auto,*,Auto">
+        <Button Classes="icon-tool"
+          Command="{Binding BackToListCommand}"
+          VerticalAlignment="Center"
+          AutomationProperties.Name="返回播放列表"
+          ToolTip.Tip="返回播放列表">
+          <fi:SymbolIcon Symbol="ArrowLeft" FontSize="15" />
+        </Button>
+
+        <StackPanel Grid.Column="1" Margin="12,0,16,0" Spacing="3" VerticalAlignment="Center">
+          <TextBlock Classes="page-title"
+            Text="{Binding DetailTitle}"
+            TextTrimming="CharacterEllipsis"
+            ToolTip.Tip="{Binding DetailTitle}" />
+          <TextBlock Classes="page-subtitle" Text="{Binding DetailSummary}" />
+        </StackPanel>
+
+        <Button Grid.Column="2"
+          Classes="accent page-action"
+          VerticalAlignment="Center"
+          Command="{Binding PlayPlaylistCommand}"
+          IsEnabled="{Binding HasDetailItems}"
+          AutomationProperties.Name="播放全部项目"
+          ToolTip.Tip="播放整个播放列表">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <fi:SymbolIcon Symbol="Play" FontSize="14" />
+            <TextBlock Text="播放全部" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </Grid>
+
+      <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="divider" Margin="0,16,0,0" />
+    </Grid>
+
+    <!-- 新建表单：只在卡片列表状态显示，避免覆盖详情页。 -->
+    <Grid Grid.Row="1" IsVisible="{Binding !IsDetailOpen}">
+      <Border Classes="settings-group"
+        IsVisible="{Binding IsCreateFormOpen}"
+        Margin="40,14,40,0"
+        Padding="12">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+          <Border Classes="card-icon" Margin="0,0,4,0">
+            <fi:SymbolIcon Symbol="CollectionsAdd"
+              FontSize="15"
+              Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center" />
+          </Border>
+
+          <TextBox x:Name="PlaylistNameBox"
+            Text="{Binding NewPlaylistName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+            PlaceholderText="播放列表名称"
+            Height="32"
+            FontSize="13"
+            VerticalContentAlignment="Center"
+            AutomationProperties.Name="播放列表名称"
+            ToolTip.Tip="输入新播放列表的名称"
+            KeyDown="OnPlaylistNameKeyDown" />
+
+          <Button Grid.Column="2"
+            Classes="accent page-action"
+            Content="创建"
+            Command="{Binding CreatePlaylistCommand}"
+            IsEnabled="{Binding CanCreatePlaylist}"
+            AutomationProperties.Name="创建播放列表" />
+
+          <Button Grid.Column="3"
+            Classes="page-action"
+            Content="取消"
+            Command="{Binding CancelCreatePlaylistCommand}"
+            AutomationProperties.Name="取消新建播放列表" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- 卡片列表：没有任何播放列表时显示横向空状态。 -->
+    <Grid Grid.Row="2" IsVisible="{Binding !IsDetailOpen}">
+      <controls:EmptyStateView IsVisible="{Binding IsEmpty}"
+        Margin="40,0,40,32"
+        MaxWidth="640"
+        HorizontalAlignment="Center"
+        VerticalAlignment="Center"
+        Symbol="Collections"
+        Title="您没有播放列表"
+        Description="创建您的第一个播放列表，来整理您喜爱的视频和音乐。"
+        PrimaryText="新建播放列表"
+        PrimaryIcon="Add"
+        PrimaryCommand="{Binding BeginCreatePlaylistCommand}"
+        ShowPrimary="True"
+        ShowSecondary="False" />
+
+      <ScrollViewer IsVisible="{Binding HasPlaylists}"
+        VerticalScrollBarVisibility="Auto"
+        HorizontalScrollBarVisibility="Disabled"
+        Margin="40,20,40,0">
+        <ItemsControl ItemsSource="{Binding Playlists}" Margin="0,0,0,20">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Orientation="Horizontal" ItemWidth="196" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="items:PlaylistItemViewModel">
+              <Border Classes="playlist-card" Margin="0,0,20,20">
+                <StackPanel>
+                  <Button Classes="card-open"
+                    Command="{Binding OpenCommand}"
+                    AutomationProperties.Name="{Binding Name}"
+                    ToolTip.Tip="打开播放列表">
+                    <StackPanel>
+                      <Border Classes="playlist-cover">
+                        <TextBlock Classes="playlist-initial" Text="{Binding Initial}" />
+                      </Border>
+                      <TextBlock Classes="card-title"
+                        Text="{Binding Name}"
+                        Margin="2,10,2,0"
+                        TextTrimming="CharacterEllipsis"
+                        ToolTip.Tip="{Binding Name}" />
+                      <TextBlock Classes="tertiary"
+                        Text="{Binding CountText}"
+                        Margin="2,2,2,0"
+                        TextTrimming="CharacterEllipsis"
+                        ToolTip.Tip="{Binding CountText}" />
+                    </StackPanel>
+                  </Button>
+
+                  <Grid ColumnDefinitions="Auto,*,Auto" Margin="8,2,8,8">
+                    <Button Classes="toolbar"
+                      Command="{Binding PlayCommand}"
+                      AutomationProperties.Name="播放播放列表"
+                      ToolTip.Tip="播放整个播放列表">
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <fi:SymbolIcon Symbol="Play" FontSize="13" />
+                        <TextBlock Text="播放" VerticalAlignment="Center" />
+                      </StackPanel>
+                    </Button>
+
+                    <Button Grid.Column="2"
+                      Classes="icon-tool"
+                      Command="{Binding DeleteCommand}"
+                      AutomationProperties.Name="删除播放列表"
+                      ToolTip.Tip="删除播放列表">
+                      <fi:SymbolIcon Symbol="Delete" FontSize="14" />
+                    </Button>
+                  </Grid>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Grid>
+
+    <!-- 详情：标题和统计在页头，这里是条目列表。 -->
+    <Grid Grid.Row="2" IsVisible="{Binding IsDetailOpen}" RowDefinitions="Auto,*" Margin="40,18,40,0">
+      <Grid Grid.Row="0"
+        Height="24"
+        Margin="0,0,0,4"
+        ColumnDefinitions="*,32"
+        IsVisible="{Binding HasDetailItems}">
+        <Grid ColumnDefinitions="24,*,Auto,64">
+          <TextBlock Grid.Column="1" Classes="list-header-label" Text="标题" Margin="8,0,0,0" />
+          <TextBlock Grid.Column="2" Classes="list-header-label" Text="类型" Margin="0,0,12,0" />
+          <TextBlock Grid.Column="3" Classes="list-header-label" Text="时长" HorizontalAlignment="Right" />
+        </Grid>
+      </Grid>
+
+      <ScrollViewer Grid.Row="1"
+        IsVisible="{Binding HasDetailItems}"
+        VerticalScrollBarVisibility="Auto"
+        HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl ItemsSource="{Binding DetailItems}" Margin="0,0,0,24">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:MediaItemViewModel">
+              <Border Classes="list-row">
+                <Grid ColumnDefinitions="*,32" Height="54">
+                  <Button Classes="row-hit"
+                    Command="{Binding PlayCommand}"
+                    AutomationProperties.Name="{Binding Title}"
+                    ToolTip.Tip="播放">
+                    <Grid ColumnDefinitions="24,*,Auto,64" Height="54">
+                      <fi:SymbolIcon Grid.Column="0"
+                        Symbol="{Binding KindSymbol}"
+                        FontSize="16"
+                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                        VerticalAlignment="Center" />
+
+                      <StackPanel Grid.Column="1"
+                        Margin="8,0,12,0"
+                        VerticalAlignment="Center"
+                        Spacing="2">
+                        <TextBlock Classes="list-title"
+                          Text="{Binding Title}"
+                          ToolTip.Tip="{Binding Title}" />
+                        <TextBlock Classes="list-subtitle"
+                          Text="{Binding Subtitle}"
+                          ToolTip.Tip="{Binding Subtitle}" />
+                      </StackPanel>
+
+                      <Border Grid.Column="2" Classes="type-pill" Margin="0,0,12,0" HorizontalAlignment="Right">
+                        <TextBlock Classes="type-pill-text" Text="{Binding TypeLabel}" />
+                      </Border>
+
+                      <TextBlock Grid.Column="3"
+                        Classes="list-duration"
+                        Text="{Binding DurationText}" />
+                    </Grid>
+                  </Button>
+
+                  <Button Grid.Column="1"
+                    Classes="icon-tool"
+                    Command="{Binding RemoveCommand}"
+                    VerticalAlignment="Center"
+                    AutomationProperties.Name="从播放列表移除"
+                    ToolTip.Tip="从播放列表移除">
+                    <fi:SymbolIcon Symbol="Delete" FontSize="14" />
+                  </Button>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <controls:EmptyStateView Grid.Row="1"
+        IsVisible="{Binding IsDetailEmpty}"
+        Margin="0,0,0,32"
+        MaxWidth="640"
+        HorizontalAlignment="Center"
+        VerticalAlignment="Center"
+        Symbol="CollectionsEmpty"
+        Title="此播放列表还是空的"
+        Description="在播放队列中使用“添加到播放列表”，把项目放进来。"
+        PrimaryText="返回播放列表"
+        PrimaryIcon="ArrowLeft"
+        PrimaryCommand="{Binding BackToListCommand}"
+        ShowPrimary="True"
+        ShowSecondary="False" />
+    </Grid>
+  </Grid>
+</UserControl>
