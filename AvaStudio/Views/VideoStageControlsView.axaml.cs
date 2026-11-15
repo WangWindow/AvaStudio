@@ -10,17 +10,13 @@ using AvaStudio.ViewModels;
 namespace AvaStudio.Views;
 
 /// <summary>
-/// 视频沉浸底部浮层。控件放在独立 Popup 中，避免 Avalonia 内容被原生视频子窗口遮住。
+/// 独立播放页的底部控制条，和标题栏、视频表面同属主窗口。
 /// 进度滑杆与其它播放器共用同一套拖动规则：拖动冻结回写，松开只提交一次定位。
 /// </summary>
 public partial class VideoStageControlsView : UserControl
 {
     private bool _isSeeking;
     private PlayerBarViewModel? _viewModel;
-    private TopLevel? _keyTopLevel;
-
-    /// <summary>Popup 窗口拿到键盘焦点时把 Esc 交回播放页处理。</summary>
-    public event EventHandler? EscapeRequested;
 
     public VideoStageControlsView()
     {
@@ -44,35 +40,6 @@ public partial class VideoStageControlsView : UserControl
 
         ProgressSlider.ValueChanged += OnProgressSliderValueChanged;
         DataContextChanged += OnDataContextChanged;
-    }
-
-    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        base.OnAttachedToVisualTree(e);
-        _keyTopLevel = TopLevel.GetTopLevel(this);
-        _keyTopLevel?.AddHandler(
-            KeyDownEvent,
-            OnTopLevelKeyDown,
-            RoutingStrategies.Tunnel,
-            handledEventsToo: true);
-    }
-
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        _keyTopLevel?.RemoveHandler(KeyDownEvent, OnTopLevelKeyDown);
-        _keyTopLevel = null;
-        base.OnDetachedFromVisualTree(e);
-    }
-
-    private void OnTopLevelKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (e.Key != Key.Escape)
-        {
-            return;
-        }
-
-        EscapeRequested?.Invoke(this, EventArgs.Empty);
-        e.Handled = true;
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)

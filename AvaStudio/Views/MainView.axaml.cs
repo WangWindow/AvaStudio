@@ -629,24 +629,6 @@ public partial class MainView : UserControl
         TogglePlayerFullscreen();
     }
 
-    /// <summary>Popup 内的 Esc 和主窗口保持同一顺序：先退全屏，再退播放页。</summary>
-    private void OnPlayerControlsEscapeRequested(object? sender, EventArgs e)
-    {
-        if (_viewModel?.IsImmersiveOpen != true)
-        {
-            return;
-        }
-
-        if (_playerFullScreen)
-        {
-            ExitPlayerFullscreen();
-        }
-        else
-        {
-            _viewModel.CloseImmersive();
-        }
-    }
-
     private void TogglePlayerFullscreen()
     {
         if (_viewModel?.IsImmersiveOpen != true)

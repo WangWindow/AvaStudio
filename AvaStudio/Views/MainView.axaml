@@ -355,6 +355,11 @@
           AutomationProperties.Name="关闭导航" />
       </Grid>
 
+      <!-- 独立播放页的底部控制条：与标题栏、视频/封面同属主窗口，避免 Popup 与原生视频分离。 -->
+      <Grid Grid.Row="2" x:Name="PlayerControlsHost" IsVisible="{Binding IsImmersiveOpen}" ZIndex="2">
+        <views:VideoStageControlsView DataContext="{Binding PlayerBar}" />
+      </Grid>
+
       <Grid Grid.Row="2" x:Name="BottomHost">
         <StackPanel Spacing="8">
           <Border IsVisible="{Binding IsStatusVisible}"
@@ -399,24 +404,6 @@
         </StackPanel>
       </Grid>
     </Grid>
-
-    <!-- 独立播放页底部控制：音频和视频共用；Popup 是拥有窗口，
-         可以显示在原生视频子窗口之上。控件全部不抢焦点，Esc 仍由 MainView 处理。 -->
-    <Popup x:Name="PlayerControlsPopup"
-      PlacementTarget="{Binding #ContentHost}"
-      Placement="AnchorAndGravity"
-      PlacementAnchor="BottomLeft"
-      PlacementGravity="BottomLeft"
-      PlacementConstraintAdjustment="SlideX,SlideY"
-      HorizontalOffset="0"
-      VerticalOffset="0"
-      Width="{Binding #ContentHost.Bounds.Width}"
-      IsLightDismissEnabled="False"
-      WindowManagerAddShadowHint="False"
-      IsOpen="{Binding IsImmersiveOpen}">
-      <views:VideoStageControlsView DataContext="{Binding PlayerBar}"
-        EscapeRequested="OnPlayerControlsEscapeRequested" />
-    </Popup>
 
     <!-- 无边框窗口的缩放握把；每条边都标记对应的 Win32 非客户区角色。 -->
     <Grid x:Name="ResizeGrips" ZIndex="50">
