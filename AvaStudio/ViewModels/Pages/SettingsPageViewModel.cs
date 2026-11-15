@@ -47,6 +47,10 @@ public sealed partial class SettingsPageViewModel : PageViewModelBase
     [ObservableProperty]
     public partial bool AutoAdvance { get; set; }
 
+    /// <summary>是否允许多个应用实例；修改后下次启动生效。</summary>
+    [ObservableProperty]
+    public partial bool MultiInstance { get; set; }
+
     /// <summary>应用版本号。</summary>
     public string AppVersion => typeof(SettingsPageViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
 
@@ -163,12 +167,22 @@ public sealed partial class SettingsPageViewModel : PageViewModelBase
         _services.Settings.SetAutoAdvance(value);
     }
 
+    partial void OnMultiInstanceChanged(bool value)
+    {
+        _services.Settings.SetMultiInstance(value);
+    }
+
     /// <summary>把设置文件中的值同步到界面属性，避免外部修改后控件显示旧值。</summary>
     private void SyncSettingValues()
     {
         if (AutoAdvance != _services.Settings.AutoAdvance)
         {
             AutoAdvance = _services.Settings.AutoAdvance;
+        }
+
+        if (MultiInstance != _services.Settings.MultiInstance)
+        {
+            MultiInstance = _services.Settings.MultiInstance;
         }
 
         var themeIndex = _services.Settings.Theme switch

@@ -286,6 +286,32 @@
                 ToolTip.Tip="当前条目结束后自动播放下一项" />
             </Grid>
           </Border>
+
+          <Border Classes="settings-row">
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="20,0" MinHeight="80">
+              <Border Classes="settings-icon">
+                <fi:SymbolIcon Symbol="Copy"
+                  FontSize="20"
+                  Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center" />
+              </Border>
+
+              <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center" Spacing="3">
+                <TextBlock Classes="settings-row-title" Text="允许运行多个实例" />
+                <TextBlock Classes="settings-row-description"
+                  Text="默认关闭：再次打开媒体会复用当前窗口。开启后每次启动独立运行；修改后下次启动生效。" />
+              </StackPanel>
+
+              <ToggleSwitch Grid.Column="2"
+                IsChecked="{Binding MultiInstance, Mode=TwoWay}"
+                OnContent="开"
+                OffContent="关"
+                VerticalAlignment="Center"
+                AutomationProperties.Name="允许运行多个实例"
+                ToolTip.Tip="修改后下次启动生效" />
+            </Grid>
+          </Border>
         </StackPanel>
 
         <!-- 个性化 -->

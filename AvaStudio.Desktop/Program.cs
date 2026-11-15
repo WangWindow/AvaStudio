@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia;
+using AvaStudio.Services.Settings;
 using AvaStudio.Services.Shell;
 using Microsoft.Win32;
 
@@ -32,8 +33,18 @@ internal sealed class Program
             RegisterAppUserModelId();
         }
 
-        // 已有实例时只转发命令行并退出；首个实例监听后续打开请求。
-        if (!SingleInstanceService.Initialize())
+        // 默认单实例；用户可在设置中显式允许多实例，修改后下次启动生效。
+        var allowMultipleInstances = false;
+        try
+        {
+            allowMultipleInstances = new AppSettingsService().MultiInstance;
+        }
+        catch
+        {
+            // 设置读取失败时保持默认单实例。
+        }
+
+        if (!allowMultipleInstances && !SingleInstanceService.Initialize())
         {
             _ = SingleInstanceService.SendToPrimary(args);
             return;

@@ -30,6 +30,9 @@ public sealed class AppSettingsService
     /// <summary>默认主题：跟随系统。</summary>
     public const string DefaultTheme = "system";
 
+    /// <summary>默认只允许一个应用实例。</summary>
+    public const bool DefaultMultiInstance = false;
+
     /// <summary>默认自动播放下一项。</summary>
     public const bool DefaultAutoAdvance = true;
 
@@ -52,6 +55,7 @@ public sealed class AppSettingsService
             Theme = DefaultTheme;
             Language = DefaultLanguage;
             AutoAdvance = DefaultAutoAdvance;
+            MultiInstance = DefaultMultiInstance;
         }
 
     }
@@ -79,6 +83,9 @@ public sealed class AppSettingsService
 
     /// <summary>是否静音。</summary>
     public bool IsMuted { get; private set; }
+
+    /// <summary>是否允许多个应用实例；默认关闭，修改后下次启动生效。</summary>
+    public bool MultiInstance { get; private set; } = DefaultMultiInstance;
 
     /// <summary>播放结束后是否自动播放下一项。</summary>
     public bool AutoAdvance { get; private set; } = DefaultAutoAdvance;
@@ -132,6 +139,18 @@ public sealed class AppSettingsService
         }
 
         AutoAdvance = autoAdvance;
+        SaveAndNotify();
+    }
+
+    /// <summary>更新多实例开关；下次启动时由 Program 读取。</summary>
+    public void SetMultiInstance(bool multiInstance)
+    {
+        if (MultiInstance == multiInstance)
+        {
+            return;
+        }
+
+        MultiInstance = multiInstance;
         SaveAndNotify();
     }
 
@@ -240,6 +259,7 @@ public sealed class AppSettingsService
             Volume = double.IsFinite(document.Volume) ? Math.Clamp(document.Volume, 0, 100) : DefaultVolume;
             IsMuted = document.IsMuted;
             AutoAdvance = document.AutoAdvance;
+            MultiInstance = document.MultiInstance;
             return true;
         }
         catch (Exception exception) when (
@@ -264,6 +284,7 @@ public sealed class AppSettingsService
                 Volume = Volume,
                 IsMuted = IsMuted,
                 AutoAdvance = AutoAdvance,
+                MultiInstance = MultiInstance,
             };
             var json = JsonSerializer.Serialize(document, AppSettingsJsonContext.Default.AppSettingsDocument);
             var temporaryPath = _settingsFilePath + ".tmp";
@@ -348,6 +369,8 @@ internal sealed class AppSettingsDocument
     public bool IsMuted { get; set; }
 
     public bool AutoAdvance { get; set; } = AppSettingsService.DefaultAutoAdvance;
+
+    public bool MultiInstance { get; set; } = AppSettingsService.DefaultMultiInstance;
 }
 
 /// <summary>NativeAOT 友好的设置 JSON 序列化上下文。</summary>
