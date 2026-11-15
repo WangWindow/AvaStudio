@@ -27,6 +27,12 @@ internal static partial class WindowsWindowAppearance
     /// <summary>系统菜单样式。</summary>
     private const uint WsSysMenu = 0x00080000;
 
+    /// <summary>播放页系统全屏期间不应用无边框最大化客户区补丁。</summary>
+    private static bool _playerFullScreen;
+
+    /// <summary>由播放页在进入/退出系统全屏时调用。</summary>
+    public static void SetPlayerFullScreen(bool isFullScreen) => _playerFullScreen = isFullScreen;
+
     public static void Apply(Window window)
     {
         // 请求原生 Mica 材质；平台不支持时 Avalonia 使用 TransparencyBackgroundFallback。
@@ -71,9 +77,26 @@ internal static partial class WindowsWindowAppearance
         IntPtr lParam,
         ref bool handled)
     {
+        // 全屏交给 Avalonia/Windows 标准路径处理，不能再用最大化客户区补丁。
+        if (_playerFullScreen)
+        {
+            return IntPtr.Zero;
+        }
+
         if (msg == WmNcCalcSize)
         {
             if (wParam != 1 || !IsZoomed(hWnd) || !TryGetWorkArea(hWnd, out var workArea))
+            {
+                return IntPtr.Zero;
+            }
+
+            // 播放页全屏会覆盖整个显示器（含任务栏），此时不能再把客户区压回工作区，
+            // 否则任务栏会露出来；只有“最大化到工作区”的窗口才需要对齐。
+            if (GetWindowRect(hWnd, out var windowRect)
+                && windowRect.Left <= workArea.rcMonitor.Left
+                && windowRect.Top <= workArea.rcMonitor.Top
+                && windowRect.Right >= workArea.rcMonitor.Right
+                && windowRect.Bottom >= workArea.rcMonitor.Bottom)
             {
                 return IntPtr.Zero;
             }
@@ -137,6 +160,10 @@ internal static partial class WindowsWindowAppearance
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool IsZoomed(IntPtr hWnd);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GetWindowRect(IntPtr hWnd, out Rect rect);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct Point

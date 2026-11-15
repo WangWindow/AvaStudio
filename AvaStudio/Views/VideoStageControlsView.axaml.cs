@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
@@ -16,6 +17,10 @@ public partial class VideoStageControlsView : UserControl
 {
     private bool _isSeeking;
     private PlayerBarViewModel? _viewModel;
+    private TopLevel? _keyTopLevel;
+
+    /// <summary>Popup 窗口拿到键盘焦点时把 Esc 交回播放页处理。</summary>
+    public event EventHandler? EscapeRequested;
 
     public VideoStageControlsView()
     {
@@ -39,6 +44,35 @@ public partial class VideoStageControlsView : UserControl
 
         ProgressSlider.ValueChanged += OnProgressSliderValueChanged;
         DataContextChanged += OnDataContextChanged;
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        _keyTopLevel = TopLevel.GetTopLevel(this);
+        _keyTopLevel?.AddHandler(
+            KeyDownEvent,
+            OnTopLevelKeyDown,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        _keyTopLevel?.RemoveHandler(KeyDownEvent, OnTopLevelKeyDown);
+        _keyTopLevel = null;
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    private void OnTopLevelKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape)
+        {
+            return;
+        }
+
+        EscapeRequested?.Invoke(this, EventArgs.Empty);
+        e.Handled = true;
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)

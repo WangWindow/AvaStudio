@@ -49,23 +49,6 @@
             </Border>
 
             <Border Classes="cover-hover-overlay" IsHitTestVisible="False" />
-
-            <Border Classes="cover-expand-badge"
-              HorizontalAlignment="Left"
-              VerticalAlignment="Top"
-              Margin="4"
-              IsHitTestVisible="False">
-              <Grid>
-                <fi:SymbolIcon Symbol="ChevronUp"
-                  FontSize="12"
-                  Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                  IsVisible="{Binding !IsImmersive}" />
-                <fi:SymbolIcon Symbol="ChevronDown"
-                  FontSize="12"
-                  Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                  IsVisible="{Binding IsImmersive}" />
-              </Grid>
-            </Border>
           </Grid>
         </Button>
 

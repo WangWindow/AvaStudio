@@ -1,5 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
-  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:fi="using:FluentIcons.Avalonia">
 
   <!-- 窄屏桌面/紧凑移动端：只折叠冗余文字，保留操作、提示与自动化名称。 -->
   <Style Selector="Grid#MainRoot.tight TextBlock.header-action-label">
@@ -202,6 +203,14 @@
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
 
+  <Style Selector="Button#CompactSearchButton">
+    <Setter Property="IsVisible" Value="False" />
+    <Setter Property="Width" Value="32" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
   <Style Selector="ListBox.nav-list">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
@@ -304,8 +313,21 @@
     <Setter Property="Margin" Value="3,0" />
   </Style>
 
+  <!-- 窄栏保留 32 DIP 搜索行：只隐藏输入框，显示居中的搜索按钮。 -->
   <Style Selector="Grid#MainRoot.rail Grid#SearchHost">
+    <Setter Property="Margin" Value="8,0,8,8" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.rail TextBox#SearchBox">
     <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.rail fi|SymbolIcon#SearchGlyph">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <Style Selector="Grid#MainRoot.rail Button#CompactSearchButton">
+    <Setter Property="IsVisible" Value="True" />
   </Style>
 
   <!-- 48 窄栏：列表左右各留 4，条目 40×40，图标中心正好落在 24。 -->
@@ -451,7 +473,7 @@
     </Setter>
   </Style>
 
-  <!-- 沉浸播放：标题行由 code-behind 归零；这里隐藏导航并让内容/播放条占满宽度。 -->
+  <!-- 独立播放页：隐藏导航和迷你播放条，内容占满；音视频共用同一套标题栏。 -->
   <Style Selector="Grid#MainRoot.immersive Border#NavPanel">
     <Setter Property="IsVisible" Value="False" />
   </Style>
@@ -468,16 +490,13 @@
     <Setter Property="IsVisible" Value="False" />
   </Style>
 
-  <Style Selector="Grid#MainRoot.immersive Grid#ResizeGrips">
-    <Setter Property="IsVisible" Value="False" />
-  </Style>
-
-  <!-- 视频沉浸保留标题栏与窗口边框：标题栏用实体表面，窗口仍可拖动、缩放和 Snap。 -->
-  <Style Selector="Grid#MainRoot.video-immersive Border#TitleBarStrip">
+  <!-- 播放页标题栏用实体表面，窗口仍可拖动、缩放和 Snap。 -->
+  <Style Selector="Grid#MainRoot.player-immersive Border#TitleBarStrip">
     <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
   </Style>
 
-  <Style Selector="Grid#MainRoot.video-immersive Grid#ResizeGrips">
-    <Setter Property="IsVisible" Value="True" />
+  <!-- 仅系统全屏时隐藏自绘缩放手柄和标题栏（标题栏由 code-behind 收起）。 -->
+  <Style Selector="Grid#MainRoot.player-fullscreen Grid#ResizeGrips">
+    <Setter Property="IsVisible" Value="False" />
   </Style>
 </Styles>

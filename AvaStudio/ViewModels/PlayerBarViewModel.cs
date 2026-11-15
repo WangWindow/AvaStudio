@@ -27,6 +27,9 @@ public sealed partial class PlayerBarViewModel : ViewModelBase
     /// <summary>请求切换沉浸播放器；由根 ViewModel 处理窗口/布局状态。</summary>
     public event EventHandler? ImmersiveToggleRequested;
 
+    /// <summary>请求切换独立播放页的系统全屏；由 MainView 处理窗口状态。</summary>
+    public event EventHandler? FullscreenToggleRequested;
+
     public PlayerBarViewModel(AppServices services)
     {
         _services = services;
@@ -86,6 +89,13 @@ public sealed partial class PlayerBarViewModel : ViewModelBase
     /// <summary>是否处于沉浸播放模式；由根 ViewModel 同步。</summary>
     [ObservableProperty]
     public partial bool IsImmersive { get; set; }
+
+    /// <summary>独立播放页是否处于系统全屏；由 MainView 同步。</summary>
+    [ObservableProperty]
+    public partial bool IsFullscreen { get; set; }
+
+    /// <summary>全屏按钮提示。</summary>
+    public string FullscreenTip => IsFullscreen ? "退出全屏" : "全屏";
 
     /// <summary>是否显示封面。</summary>
     public bool HasArtwork => Artwork is not null;
@@ -165,6 +175,15 @@ public sealed partial class PlayerBarViewModel : ViewModelBase
     [RelayCommand]
     private void ToggleImmersive() => ImmersiveToggleRequested?.Invoke(this, EventArgs.Empty);
 
+    /// <summary>请求切换独立播放页的系统全屏。</summary>
+    [RelayCommand]
+    private void ToggleFullscreen() => FullscreenToggleRequested?.Invoke(this, EventArgs.Empty);
+
+    partial void OnIsFullscreenChanged(bool value)
+    {
+        OnPropertyChanged(nameof(FullscreenTip));
+    }
+
     /// <summary>刷新全部绑定属性。</summary>
     private void Refresh()
     {
@@ -180,7 +199,7 @@ public sealed partial class PlayerBarViewModel : ViewModelBase
             MetaText = item is null
                 ? string.Empty
                 : item.Kind == MediaItemKind.Video
-                    ? System.IO.Path.GetDirectoryName(item.Path) ?? "视频"
+                    ? GetVideoFolderLabel(item.Path)
                     : item.DisplayMeta;
             IsPlaying = snapshot.Phase == PlaybackPhase.Playing;
             IsLoading = snapshot.Phase is PlaybackPhase.Opening;
@@ -216,6 +235,16 @@ public sealed partial class PlayerBarViewModel : ViewModelBase
         OnPropertyChanged(nameof(RepeatTip));
         OnPropertyChanged(nameof(VolumeSymbol));
         OnPropertyChanged(nameof(HasArtwork));
+    }
+
+    /// <summary>视频副标题只显示所在文件夹名，避免把完整路径暴露在界面上。</summary>
+    private static string GetVideoFolderLabel(string path)
+    {
+        var directory = System.IO.Path.GetDirectoryName(path);
+        var folderName = string.IsNullOrWhiteSpace(directory)
+            ? string.Empty
+            : System.IO.Path.GetFileName(directory);
+        return string.IsNullOrWhiteSpace(folderName) ? "视频" : folderName;
     }
 
     /// <summary>加载当前媒体封面。</summary>

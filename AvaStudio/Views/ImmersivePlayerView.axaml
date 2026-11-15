@@ -9,197 +9,64 @@
   x:DataType="vm:PlayerBarViewModel"
   x:CompileBindings="True">
 
-  <UserControl.Resources>
-    <!-- 底部控制面渐变：从透明过渡到深色，只压暗控制区，不遮挡上方封面。 -->
-    <LinearGradientBrush x:Key="ImmersiveControlScrimBrush" StartPoint="0%,0%" EndPoint="0%,100%">
-      <GradientStop Offset="0" Color="#00000000" />
-      <GradientStop Offset="0.5" Color="#33000000" />
-      <GradientStop Offset="1" Color="#99000000" />
-    </LinearGradientBrush>
-  </UserControl.Resources>
-
-  <UserControl.Styles>
-    <StyleInclude Source="avares://AvaStudio/Styles/PlayerStyles.axaml" />
-  </UserControl.Styles>
-
-  <!-- 音频沉浸页：封面/标题居中，底部自带完整的传输、进度与音量控制。
-       深色只作用于这一层，不改变资料库外壳的主题。 -->
+  <!-- 音频独立播放页：只画封面/标题；退出与播放控制由共享标题栏和底部 Popup 提供。 -->
   <ThemeVariantScope RequestedThemeVariant="Dark">
     <Border Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}">
-      <Grid RowDefinitions="*,Auto">
-        <Grid Grid.Row="0">
-          <Viewbox Margin="48,28,48,16"
-            Stretch="Uniform"
-            StretchDirection="DownOnly"
+      <Viewbox Margin="48,28,48,148"
+        Stretch="Uniform"
+        StretchDirection="DownOnly"
+        HorizontalAlignment="Center"
+        VerticalAlignment="Center">
+        <StackPanel Width="480" Spacing="0">
+          <Border Width="300"
+            Height="300"
+            CornerRadius="10"
+            ClipToBounds="True"
             HorizontalAlignment="Center"
-            VerticalAlignment="Center">
-            <StackPanel Width="480" Spacing="0">
-              <Border Width="300"
-                Height="300"
-                CornerRadius="10"
-                ClipToBounds="True"
-                HorizontalAlignment="Center"
-                Background="{DynamicResource SystemControlBackgroundListLowBrush}"
-                BorderBrush="{DynamicResource SystemControlBackgroundBaseLowBrush}"
-                BorderThickness="1"
-                BoxShadow="0 18 48 0 #73000000">
-                <Grid>
-                  <Image Source="{Binding Artwork}"
-                    Stretch="UniformToFill"
-                    RenderOptions.BitmapInterpolationMode="HighQuality"
-                    IsVisible="{Binding HasArtwork}" />
-                  <Grid IsVisible="{Binding !HasArtwork}">
-                    <fi:SymbolIcon Symbol="MusicNote2"
-                      FontSize="54"
-                      IsVisible="{Binding !IsVideo}"
-                      Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                      HorizontalAlignment="Center"
-                      VerticalAlignment="Center" />
-                    <fi:SymbolIcon Symbol="Video"
-                      FontSize="54"
-                      IsVisible="{Binding IsVideo}"
-                      Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                      HorizontalAlignment="Center"
-                      VerticalAlignment="Center" />
-                  </Grid>
-                </Grid>
-              </Border>
-
-              <TextBlock Text="{Binding Title}"
-                Margin="0,26,0,0"
-                MaxWidth="480"
-                FontSize="28"
-                FontWeight="SemiBold"
-                Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                TextAlignment="Center"
-                TextWrapping="Wrap" />
-
-              <TextBlock Text="{Binding MetaText}"
-                Margin="0,8,0,0"
-                MaxWidth="440"
-                FontSize="13.5"
-                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                TextAlignment="Center"
-                TextWrapping="Wrap" />
-            </StackPanel>
-          </Viewbox>
-
-          <Button x:Name="CloseImmersiveButton"
-            Classes="icon-tool immersive-close"
-            Width="40"
-            Height="40"
-            Margin="20,16,0,0"
-            HorizontalAlignment="Left"
-            VerticalAlignment="Top"
-            Command="{Binding ToggleImmersiveCommand}"
-            AutomationProperties.Name="收起播放器（Esc）"
-            ToolTip.Tip="收起播放器（Esc）">
-            <fi:SymbolIcon Symbol="ChevronDown" FontSize="18" />
-          </Button>
-        </Grid>
-
-        <!-- 控制面本身铺满宽度，内容限制在 1120 并居中；48 的左右留白与上方封面一致。 -->
-        <Border Grid.Row="1"
-          VerticalAlignment="Bottom"
-          Padding="48,26,48,32"
-          Background="{StaticResource ImmersiveControlScrimBrush}">
-          <Grid MaxWidth="1120"
-            HorizontalAlignment="Stretch"
-            RowDefinitions="Auto,Auto"
-            RowSpacing="8">
-
-            <!-- 进度滑杆：拖动期间由 code-behind 冻结回写，松开只提交一次定位。 -->
-            <Slider x:Name="ProgressSlider"
-              Classes="player-slider player-progress"
-              Template="{StaticResource PlayerSliderTemplate}"
-              Minimum="0"
-              Maximum="{Binding Duration, Mode=OneWay}"
-              AutomationProperties.Name="播放进度" />
-
-            <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto">
-              <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                <Button Classes="player-icon immersive"
-                  Command="{Binding PreviousCommand}"
-                  AutomationProperties.Name="上一个"
-                  ToolTip.Tip="上一个">
-                  <fi:SymbolIcon Symbol="Previous" FontSize="16" />
-                </Button>
-
-                <Button Classes="player-icon player-play immersive"
-                  Command="{Binding TogglePlayPauseCommand}"
-                  AutomationProperties.Name="{Binding PlayPauseTip}"
-                  ToolTip.Tip="{Binding PlayPauseTip}">
-                  <fi:SymbolIcon Symbol="{Binding PlayPauseSymbol}" FontSize="20" />
-                </Button>
-
-                <Button Classes="player-icon immersive"
-                  Command="{Binding NextCommand}"
-                  AutomationProperties.Name="下一个"
-                  ToolTip.Tip="下一个">
-                  <fi:SymbolIcon Symbol="Next" FontSize="16" />
-                </Button>
-
-                <StackPanel Orientation="Horizontal"
-                  Margin="14,0,0,0"
-                  VerticalAlignment="Center">
-                  <TextBlock Classes="player-time immersive" Text="{Binding PositionText}" />
-                  <TextBlock Classes="player-time immersive" Text=" / " />
-                  <TextBlock Classes="player-time immersive" Text="{Binding DurationText}" />
-                </StackPanel>
-              </StackPanel>
-
-              <StackPanel Grid.Column="2"
-                Orientation="Horizontal"
-                Spacing="4"
-                VerticalAlignment="Center">
-                <Button Classes="player-icon immersive"
-                  Command="{Binding ToggleMuteCommand}"
-                  AutomationProperties.Name="静音或取消静音"
-                  ToolTip.Tip="静音或取消静音">
-                  <fi:SymbolIcon Symbol="{Binding VolumeSymbol}" FontSize="16" />
-                </Button>
-
-                <Slider x:Name="VolumeSlider"
-                  Classes="player-slider player-volume"
-                  Template="{StaticResource PlayerSliderTemplate}"
-                  Minimum="0"
-                  Maximum="100"
-                  Value="{Binding Volume, Mode=TwoWay}"
-                  Width="120"
-                  Margin="2,0,8,0"
-                  AutomationProperties.Name="音量" />
-
-                <Button Classes="player-icon player-toggle immersive"
-                  Classes.active="{Binding Shuffle}"
-                  Command="{Binding ToggleShuffleCommand}"
-                  AutomationProperties.Name="随机播放"
-                  ToolTip.Tip="随机播放">
-                  <fi:SymbolIcon Symbol="ArrowShuffle" FontSize="16" />
-                </Button>
-
-                <Button Classes="player-icon player-toggle immersive"
-                  Command="{Binding CycleRepeatModeCommand}"
-                  AutomationProperties.Name="{Binding RepeatTip}"
-                  ToolTip.Tip="{Binding RepeatTip}">
-                  <fi:SymbolIcon Symbol="{Binding RepeatSymbol}" FontSize="16" />
-                </Button>
-
-                <Button x:Name="MoreButton"
-                  Classes="player-icon immersive"
-                  AutomationProperties.Name="更多操作"
-                  ToolTip.Tip="更多操作">
-                  <Button.Flyout>
-                    <MenuFlyout Placement="TopEdgeAlignedRight">
-                      <MenuItem Header="停止" Command="{Binding StopCommand}" />
-                    </MenuFlyout>
-                  </Button.Flyout>
-                  <fi:SymbolIcon Symbol="MoreHorizontal" FontSize="17" />
-                </Button>
-              </StackPanel>
+            Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+            BorderBrush="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+            BorderThickness="1"
+            BoxShadow="0 18 48 0 #73000000">
+            <Grid>
+              <Image Source="{Binding Artwork}"
+                Stretch="UniformToFill"
+                RenderOptions.BitmapInterpolationMode="HighQuality"
+                IsVisible="{Binding HasArtwork}" />
+              <Grid IsVisible="{Binding !HasArtwork}">
+                <fi:SymbolIcon Symbol="MusicNote2"
+                  FontSize="54"
+                  IsVisible="{Binding !IsVideo}"
+                  Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center" />
+                <fi:SymbolIcon Symbol="Video"
+                  FontSize="54"
+                  IsVisible="{Binding IsVideo}"
+                  Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center" />
+              </Grid>
             </Grid>
-          </Grid>
-        </Border>
-      </Grid>
+          </Border>
+
+          <TextBlock Text="{Binding Title}"
+            Margin="0,26,0,0"
+            MaxWidth="480"
+            FontSize="28"
+            FontWeight="SemiBold"
+            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+            TextAlignment="Center"
+            TextWrapping="Wrap" />
+
+          <TextBlock Text="{Binding MetaText}"
+            Margin="0,8,0,0"
+            MaxWidth="440"
+            FontSize="13.5"
+            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+            TextAlignment="Center"
+            TextWrapping="Wrap" />
+        </StackPanel>
+      </Viewbox>
     </Border>
   </ThemeVariantScope>
 </UserControl>

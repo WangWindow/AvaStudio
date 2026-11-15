@@ -152,16 +152,6 @@
     <Setter Property="Opacity" Value="0.18" />
   </Style>
 
-  <!-- 左上角仅作视觉提示的展开/收起徽标，不参与命中。 -->
-  <Style Selector="Border.cover-expand-badge">
-    <Setter Property="Width" Value="28" />
-    <Setter Property="Height" Value="28" />
-    <Setter Property="CornerRadius" Value="6" />
-    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlBackgroundBaseLowBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-  </Style>
-
   <!-- 播放条与沉浸页共用 Styles/PlayerSliderResources.axaml 里的滑杆模板。 -->
   <Style Selector="Slider.player-slider">
     <Setter Property="Height" Value="20" />

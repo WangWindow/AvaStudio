@@ -55,8 +55,8 @@ public sealed partial class MusicPageViewModel : PageViewModelBase
     /// <summary>按当前流派/排序筛选后的歌曲。</summary>
     public ObservableCollection<MediaItemViewModel> Songs { get; } = [];
 
-    /// <summary>歌曲字母分组，对应 Screenbox 的 &amp;/#/A-Z 分段。</summary>
-    public ObservableCollection<SongLetterGroup> SongGroups { get; } = [];
+    /// <summary>扁平化的歌曲行与字母表头；供虚拟化列表按视口创建。</summary>
+    public ObservableCollection<SongListEntry> SongEntries { get; } = [];
 
     /// <summary>当前资料库中的流派选项。</summary>
     public ObservableCollection<string> Genres { get; } = [];
@@ -396,18 +396,16 @@ public sealed partial class MusicPageViewModel : PageViewModelBase
             Songs.Add(song);
         }
 
-        SongGroups.Clear();
+        SongEntries.Clear();
         foreach (var group in Songs.GroupBy(song => LibraryTextSort.GetLetterHeader(song.Title))
                      .OrderBy(static group => GetHeaderOrder(group.Key))
                      .ThenBy(static group => group.Key, StringComparer.CurrentCultureIgnoreCase))
         {
-            var letterGroup = new SongLetterGroup(group.Key);
+            SongEntries.Add(SongListEntry.FromHeader(group.Key));
             foreach (var song in group)
             {
-                letterGroup.Songs.Add(song);
+                SongEntries.Add(SongListEntry.FromSong(song));
             }
-
-            SongGroups.Add(letterGroup);
         }
 
         RaiseSectionProperties();
@@ -430,7 +428,7 @@ public sealed partial class MusicPageViewModel : PageViewModelBase
         OnPropertyChanged(nameof(IsArtistsSelected));
         OnPropertyChanged(nameof(HasSongs));
         OnPropertyChanged(nameof(HasAlbums));
-        OnPropertyChanged(nameof(SongGroups));
+        OnPropertyChanged(nameof(SongEntries));
         OnPropertyChanged(nameof(AlbumGroups));
         OnPropertyChanged(nameof(ArtistGroups));
         OnPropertyChanged(nameof(HasArtists));

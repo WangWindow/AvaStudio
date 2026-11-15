@@ -145,42 +145,42 @@
         </Grid>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-          <!-- 外层按字母分组；内层复用同一行模板。 -->
-          <ItemsControl ItemsSource="{Binding SongGroups}"
+          <!-- 扁平化表头/歌曲行，交给 VirtualizingStackPanel 只创建视口内的行。 -->
+          <ItemsControl ItemsSource="{Binding SongEntries}"
             HorizontalAlignment="Stretch"
             ItemContainerTheme="{StaticResource LibraryRowContainer}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <VirtualizingStackPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="items:SongLetterGroup">
-                <StackPanel>
-                  <TextBlock Classes="group-header" Text="{Binding Header}" />
+              <DataTemplate x:DataType="items:SongListEntry">
+                <Grid>
+                  <TextBlock Classes="group-header"
+                    Text="{Binding Header}"
+                    IsVisible="{Binding IsHeader}" />
 
-                  <ItemsControl ItemsSource="{Binding Songs}"
-                    HorizontalAlignment="Stretch"
-                    ItemContainerTheme="{StaticResource LibraryRowContainer}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="vm:MediaItemViewModel">
-                        <Button Classes="library-row"
-                          Command="{Binding PlayCommand}"
-                          AutomationProperties.Name="{Binding Title}"
-                          ToolTip.Tip="播放歌曲">
-                          <Grid ColumnDefinitions="44,3*,2*,2*,2*,88">
-                            <fi:SymbolIcon Grid.Column="0"
-                              Symbol="Play"
-                              FontSize="12"
-                              Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1" Classes="row-title" Text="{Binding Title}" Margin="0,0,12,0" />
-                            <TextBlock Grid.Column="2" Classes="row-meta" Text="{Binding Artist}" Margin="0,0,12,0" />
-                            <TextBlock Grid.Column="3" Classes="row-meta" Text="{Binding Album}" Margin="0,0,12,0" />
-                            <TextBlock Grid.Column="4" Classes="row-meta" Text="{Binding Genre}" Margin="0,0,12,0" />
-                            <TextBlock Grid.Column="5" Classes="tertiary" Text="{Binding DurationText}" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                          </Grid>
-                        </Button>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </StackPanel>
+                  <Button Classes="library-row"
+                    IsVisible="{Binding !IsHeader}"
+                    Command="{Binding Song.PlayCommand}"
+                    AutomationProperties.Name="{Binding Song.Title}"
+                    ToolTip.Tip="播放歌曲">
+                    <Grid ColumnDefinitions="44,3*,2*,2*,2*,88">
+                      <fi:SymbolIcon Grid.Column="0"
+                        Symbol="Play"
+                        FontSize="12"
+                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Classes="row-title" Text="{Binding Song.Title}" Margin="0,0,12,0" />
+                      <TextBlock Grid.Column="2" Classes="row-meta" Text="{Binding Song.Artist}" Margin="0,0,12,0" />
+                      <TextBlock Grid.Column="3" Classes="row-meta" Text="{Binding Song.Album}" Margin="0,0,12,0" />
+                      <TextBlock Grid.Column="4" Classes="row-meta" Text="{Binding Song.Genre}" Margin="0,0,12,0" />
+                      <TextBlock Grid.Column="5" Classes="tertiary" Text="{Binding Song.DurationText}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+                  </Button>
+                </Grid>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>

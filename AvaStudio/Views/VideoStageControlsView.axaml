@@ -123,6 +123,22 @@
           <Button Classes="player-icon immersive"
             Focusable="False"
             IsTabStop="False"
+            Command="{Binding ToggleFullscreenCommand}"
+            AutomationProperties.Name="{Binding FullscreenTip}"
+            ToolTip.Tip="{Binding FullscreenTip}">
+            <Grid>
+              <fi:SymbolIcon Symbol="FullScreenMaximize"
+                FontSize="16"
+                IsVisible="{Binding !IsFullscreen}" />
+              <fi:SymbolIcon Symbol="FullScreenMinimize"
+                FontSize="16"
+                IsVisible="{Binding IsFullscreen}" />
+            </Grid>
+          </Button>
+
+          <Button Classes="player-icon immersive"
+            Focusable="False"
+            IsTabStop="False"
             AutomationProperties.Name="更多操作"
             ToolTip.Tip="更多操作">
             <Button.Flyout>

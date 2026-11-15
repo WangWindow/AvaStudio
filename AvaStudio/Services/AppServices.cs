@@ -1,7 +1,11 @@
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
+using Avalonia.Threading;
+using AvaStudio.Playback;
 using AvaStudio.Platform;
 using AvaStudio.Services.Library;
+using AvaStudio.Services.MediaTransport;
 using AvaStudio.Services.Playback;
 using AvaStudio.Services.Playlists;
 using AvaStudio.Services.Settings;
@@ -26,6 +30,17 @@ public sealed class AppServices : IAsyncDisposable
         Library = new LibraryService(Settings, ArtworkStore, VideoThumbnailProviderFactory.Create());
         Playlists = new PlaylistStore(Settings);
         Playback = new PlaybackCoordinator(Library, Settings, videoOutputAccessor);
+        MediaTransport = MediaTransportServiceFactory.Create();
+        MediaTransport.PlayRequested += OnMediaTransportPlayRequested;
+        MediaTransport.PauseRequested += OnMediaTransportPauseRequested;
+        MediaTransport.NextRequested += OnMediaTransportNextRequested;
+        MediaTransport.PreviousRequested += OnMediaTransportPreviousRequested;
+        MediaTransport.StopRequested += OnMediaTransportStopRequested;
+        MediaTransport.SeekRequested += OnMediaTransportSeekRequested;
+
+        // 播放协调器是唯一事实来源：每次当前条目/状态变化都投影到系统媒体控制。
+        Playback.CurrentItemChanged += OnPlaybackCurrentItemChanged;
+        Playback.StateChanged += OnPlaybackStateChanged;
     }
 
     /// <summary>平台文件选择与系统外壳操作。</summary>
@@ -49,9 +64,16 @@ public sealed class AppServices : IAsyncDisposable
     /// <summary>播放队列与媒体会话协调。</summary>
     public PlaybackCoordinator Playback { get; }
 
+    /// <summary>系统媒体控制集成（Windows 为 SMTC，其余平台为空实现）。</summary>
+    public IMediaTransportService MediaTransport { get; }
+
     /// <summary>启动时读取缓存；有资料库位置时在后台刷新索引。</summary>
     public async Task InitializeAsync()
     {
+        // 系统媒体控制在 Avalonia 初始化完成后（UI 线程）注册，
+        // 这样 SMTC 会话与窗口生命周期一致；失败只降级，不影响应用启动。
+        await InitializeMediaTransportAsync().ConfigureAwait(true);
+
         await Library.InitializeAsync().ConfigureAwait(true);
         if (Settings.MusicFolders.Count > 0 || Settings.VideoFolders.Count > 0)
         {
@@ -68,6 +90,145 @@ public sealed class AppServices : IAsyncDisposable
         }
 
         _disposed = true;
+
+        Playback.CurrentItemChanged -= OnPlaybackCurrentItemChanged;
+        Playback.StateChanged -= OnPlaybackStateChanged;
+
+        MediaTransport.PlayRequested -= OnMediaTransportPlayRequested;
+        MediaTransport.PauseRequested -= OnMediaTransportPauseRequested;
+        MediaTransport.NextRequested -= OnMediaTransportNextRequested;
+        MediaTransport.PreviousRequested -= OnMediaTransportPreviousRequested;
+        MediaTransport.StopRequested -= OnMediaTransportStopRequested;
+        MediaTransport.SeekRequested -= OnMediaTransportSeekRequested;
+
+        // 先注销系统媒体会话，再关闭播放引擎，避免系统按钮在拆除过程中进入已释放的会话。
+        try
+        {
+            MediaTransport.Dispose();
+        }
+        catch (Exception exception)
+        {
+            Debug.WriteLine($"[MediaTransport] 释放系统媒体控制失败：{exception}");
+        }
+
         await Playback.DisposeAsync().ConfigureAwait(false);
     }
+
+    /// <summary>初始化系统媒体控制；任何异常都只记录并禁用本次会话的集成。</summary>
+    private async Task InitializeMediaTransportAsync()
+    {
+        try
+        {
+            await MediaTransport.InitializeAsync().ConfigureAwait(true);
+        }
+        catch (Exception exception)
+        {
+            Debug.WriteLine($"[MediaTransport] 初始化系统媒体控制失败：{exception}");
+        }
+
+        // 初始化完成前可能已经开始播放，补一次当前状态，保证浮出层信息完整。
+        UpdateMediaTransportTrack();
+        SyncMediaTransportState();
+    }
+
+    /// <summary>当前条目变化：刷新标题/封面，并同步一次状态。</summary>
+    private void OnPlaybackCurrentItemChanged(object? sender, EventArgs e)
+    {
+        UpdateMediaTransportTrack();
+        SyncMediaTransportState();
+    }
+
+    /// <summary>播放快照变化：同步阶段、进度与随机/循环模式。</summary>
+    private void OnPlaybackStateChanged(object? sender, EventArgs e) => SyncMediaTransportState();
+
+    private void UpdateMediaTransportTrack() => _ = UpdateMediaTransportTrackAsync();
+
+    private async Task UpdateMediaTransportTrackAsync()
+    {
+        try
+        {
+            await MediaTransport.UpdateTrackAsync(Playback.CurrentItem).ConfigureAwait(true);
+        }
+        catch (Exception exception)
+        {
+            Debug.WriteLine($"[MediaTransport] 更新当前媒体失败：{exception}");
+        }
+    }
+
+    private void SyncMediaTransportState()
+    {
+        try
+        {
+            var snapshot = Playback.Snapshot;
+            var duration = snapshot.Duration ?? Playback.CurrentItem?.Duration ?? TimeSpan.Zero;
+            MediaTransport.UpdatePlaybackState(snapshot.Phase);
+            MediaTransport.UpdatePosition(snapshot.Position, duration);
+            MediaTransport.UpdatePlaybackMode(Playback.IsShuffle, Playback.RepeatMode);
+        }
+        catch (Exception exception)
+        {
+            Debug.WriteLine($"[MediaTransport] 同步播放状态失败：{exception}");
+        }
+    }
+
+    /// <summary>
+    /// SMTC 回调可能来自 WinRT 线程，所有播放操作都切回 UI 线程执行。
+    /// </summary>
+    private static void RunOnUiThread(Func<Task> operation)
+    {
+        Dispatcher.UIThread.Post(async () =>
+        {
+            try
+            {
+                await operation().ConfigureAwait(true);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                Debug.WriteLine($"[MediaTransport] 执行系统媒体命令失败：{exception}");
+            }
+        });
+    }
+
+    /// <summary>系统“播放”：只在暂停/停止/结束状态下恢复，避免与界面按钮重复切换。</summary>
+    private void OnMediaTransportPlayRequested(object? sender, EventArgs e)
+    {
+        RunOnUiThread(() =>
+        {
+            var phase = Playback.Snapshot.Phase;
+            if (Playback.CurrentItem is null)
+            {
+                return Task.CompletedTask;
+            }
+
+            return phase is PlaybackPhase.Paused
+                or PlaybackPhase.Stopped
+                or PlaybackPhase.Ended
+                or PlaybackPhase.Idle
+                ? Playback.TogglePlayPauseAsync()
+                : Task.CompletedTask;
+        });
+    }
+
+    /// <summary>系统“暂停”：只在真正播放时暂停。</summary>
+    private void OnMediaTransportPauseRequested(object? sender, EventArgs e)
+    {
+        RunOnUiThread(() => Playback.Snapshot.Phase == PlaybackPhase.Playing
+            ? Playback.TogglePlayPauseAsync()
+            : Task.CompletedTask);
+    }
+
+    private void OnMediaTransportNextRequested(object? sender, EventArgs e) =>
+        RunOnUiThread(() => Playback.NextAsync());
+
+    private void OnMediaTransportPreviousRequested(object? sender, EventArgs e) =>
+        RunOnUiThread(() => Playback.PreviousAsync());
+
+    private void OnMediaTransportStopRequested(object? sender, EventArgs e) =>
+        RunOnUiThread(() => Playback.StopAsync());
+
+    private void OnMediaTransportSeekRequested(object? sender, TimeSpan position) =>
+        RunOnUiThread(() => Playback.SeekAsync(position));
 }

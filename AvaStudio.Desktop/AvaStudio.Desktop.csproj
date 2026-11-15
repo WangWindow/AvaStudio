@@ -6,11 +6,8 @@
     <TargetFramework>net11.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <!-- 程序图标与文件版本信息（版本号来自根目录 Directory.Build.props） -->
     <ApplicationIcon>..\AvaStudio\Assets\Icon.ico</ApplicationIcon>
     <AssemblyTitle>AvaStudio</AssemblyTitle>
-    <Product>AvaStudio</Product>
-    <Company>WangWindow</Company>
     <Copyright>Copyright © 2026 WangWindow</Copyright>
   </PropertyGroup>
 
@@ -18,7 +15,6 @@
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
     <PublishAot>true</PublishAot>
-    <!-- Windows Shell 缩略图通过 ComImport/RCW 调用；Native AOT 需要内置 COM 互操作支持。 -->
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
   </PropertyGroup>
 
@@ -27,6 +23,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <TargetFramework>net11.0-windows10.0.19041.0</TargetFramework>
     <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
   </PropertyGroup>
 

@@ -18,4 +18,15 @@ public static class WindowAppearance
 
         Windows.WindowsWindowAppearance.Apply(window);
     }
+
+    /// <summary>通知平台层当前是否处于播放页系统全屏，避免无边框最大化补丁介入。</summary>
+    public static void SetPlayerFullScreen(bool isFullScreen)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        Windows.WindowsWindowAppearance.SetPlayerFullScreen(isFullScreen);
+    }
 }

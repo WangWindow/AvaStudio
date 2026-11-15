@@ -73,10 +73,16 @@ public sealed partial class MediaItemViewModel : ViewModelBase
     /// <summary>流派或“未知流派”。</summary>
     public string Genre => Item.DisplayGenre;
 
-    /// <summary>歌曲行的副标题：艺术家 + 专辑；视频行使用目录名。</summary>
+    /// <summary>歌曲行的副标题：艺术家 + 专辑；视频行只显示文件夹名，避免冗长路径。</summary>
     public string Subtitle => Item.Kind == MediaItemKind.Video
-        ? DirectoryName
+        ? GetVideoFolderLabel()
         : Item.DisplayMeta;
+
+    private string GetVideoFolderLabel()
+    {
+        var folderName = System.IO.Path.GetFileName(DirectoryName);
+        return string.IsNullOrWhiteSpace(folderName) ? "视频" : folderName;
+    }
 
     /// <summary>格式化后的时长。</summary>
     public string DurationText => DurationFormatter.Format(Item.Duration);

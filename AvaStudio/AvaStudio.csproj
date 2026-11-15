@@ -8,19 +8,20 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
-  <!-- Platform feature code lives under AvaStudio/Platform and is selected at
-       compile time. An explicit publish RID wins over the build host. -->
-  <PropertyGroup Condition="'$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">
-    <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <PublishAot>true</PublishAot>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Linux'))">
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <TargetFramework>net11.0-windows10.0.19041.0</TargetFramework>
+    <DefineConstants>$(DefineConstants);WINDOWS;WINDOWS_SMTC</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Linux'))">
     <DefineConstants>$(DefineConstants);LINUX</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
-    <DefineConstants Condition="$(RuntimeIdentifier.StartsWith('win'))">$(DefineConstants);WINDOWS</DefineConstants>
-    <DefineConstants Condition="$(RuntimeIdentifier.StartsWith('linux'))">$(DefineConstants);LINUX</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -41,9 +42,7 @@
     <PackageReference Include="TinyPinyin" />
   </ItemGroup>
 
-  <!-- TagLibSharp 使用反射创建格式处理器；NativeAOT 发布时需要保留其程序集。
-       TrimmerRootAssembly 只在裁剪阶段生效，Debug 构建不会增加运行时开销。 -->
   <ItemGroup>
-    <TrimmerRootAssembly Include="TagLibSharp" />
+    <TrimmerRootAssembly Include="TagLibSharp" Condition="'$(Configuration)' == 'Release'"/>
   </ItemGroup>
 </Project>

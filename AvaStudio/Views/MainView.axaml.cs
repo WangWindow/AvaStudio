@@ -32,7 +32,7 @@ public partial class MainView : UserControl
     private bool _prewarmed;
     private int _immersiveLayerToken;
     private bool? _immersiveApplied;
-    private bool _immersiveFullScreen;
+    private bool _playerFullScreen;
     private WindowState _restoreWindowState = WindowState.Normal;
     private MainViewModel? _viewModel;
     private Window? _window;
@@ -116,6 +116,7 @@ public partial class MainView : UserControl
         _window.PropertyChanged += OnWindowPropertyChanged;
         _window.Activated += OnWindowActivated;
         _window.Deactivated += OnWindowDeactivated;
+        _window.AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
         MainRoot.Classes.Set("desktop", true);
         MinimizeButton.IsVisible = true;
         MaximizeButton.IsVisible = true;
@@ -141,6 +142,7 @@ public partial class MainView : UserControl
         _window.PropertyChanged -= OnWindowPropertyChanged;
         _window.Activated -= OnWindowActivated;
         _window.Deactivated -= OnWindowDeactivated;
+        _window.RemoveHandler(KeyDownEvent, OnWindowKeyDown);
     }
 
     /// <summary>
@@ -239,11 +241,39 @@ public partial class MainView : UserControl
         base.OnDetachedFromVisualTree(e);
     }
 
+    /// <summary>窗口级 Esc：即使当前没有焦点元素也能退出全屏/播放页。</summary>
+    private void OnWindowKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || _viewModel?.IsImmersiveOpen != true)
+        {
+            return;
+        }
+
+        if (_playerFullScreen)
+        {
+            ExitPlayerFullscreen();
+        }
+        else
+        {
+            _viewModel.CloseImmersive();
+        }
+
+        e.Handled = true;
+    }
+
     private void OnWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
         if (e.Property == Window.WindowStateProperty)
         {
             UpdateWindowState();
+
+            // 用户用系统快捷键/任务栏退出全屏时，恢复标题栏并同步按钮图标。
+            if (_playerFullScreen && _window?.WindowState != WindowState.FullScreen)
+            {
+                _playerFullScreen = false;
+                WindowAppearance.SetPlayerFullScreen(false);
+                UpdateImmersiveChrome();
+            }
         }
         else if (e.Property.Name == nameof(Window.ActualTransparencyLevel))
         {
@@ -368,17 +398,29 @@ public partial class MainView : UserControl
         _window?.Close();
     }
 
+    /// <summary>音频播放页双击切换全屏；视频原生画面暂不转发双击。</summary>
+    private void OnImmersiveSurfaceDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (_viewModel?.IsImmersiveAudio == true)
+        {
+            TogglePlayerFullscreen();
+            e.Handled = true;
+        }
+    }
+
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            _viewModel.PlayerBar.FullscreenToggleRequested -= OnFullscreenToggleRequested;
         }
 
         _viewModel = DataContext as MainViewModel;
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+            _viewModel.PlayerBar.FullscreenToggleRequested += OnFullscreenToggleRequested;
             _viewModel.AttachTopLevel(TopLevel.GetTopLevel(this));
             if (_videoOutput is not null)
             {
@@ -530,8 +572,8 @@ public partial class MainView : UserControl
     }
 
     /// <summary>
-    /// 音频沉浸：隐藏标题栏并进入系统全屏；视频播放页保留标题栏、窗口边框和
-    /// 可拖动的桌面窗口。退出时恢复进入全屏前的窗口状态。
+    /// 独立播放页：音视频共用 48 DIP 标题栏和窗口边框；系统全屏只由播放页里的
+    /// 全屏按钮触发，进入全屏时隐藏标题栏但保留底部 Popup 控制。
     /// </summary>
     private void ApplyImmersiveState(bool isImmersive, bool force = false)
     {
@@ -540,64 +582,142 @@ public partial class MainView : UserControl
             return;
         }
 
-        var isImmersiveAudio = isImmersive && _viewModel?.IsImmersiveAudio == true;
-        var isImmersiveVideo = isImmersive && _viewModel?.IsImmersiveVideo == true;
-
         _immersiveApplied = isImmersive;
+
+        if (!isImmersive)
+        {
+            ExitPlayerFullscreen(updateChrome: false);
+        }
+
         MainRoot.Classes.Set("immersive", isImmersive);
-        MainRoot.Classes.Set("video-immersive", isImmersiveVideo);
+        MainRoot.Classes.Set("player-immersive", isImmersive);
 
-        // 视频沉浸保留 48 DIP 标题栏和窗口边框，方便拖动、Snap Layouts 和退出；
-        // 音频沉浸才进入无标题栏的系统全屏。
-        TitleBarStrip.IsVisible = !isImmersiveAudio;
-        ShellGrid.RowDefinitions[0].Height = new GridLength(isImmersiveAudio ? 0 : 48);
-
-        // 两种沉浸都暂时隐藏底部状态栏与播放条：视频不使用 Avalonia 内容覆盖原生画面。
+        // 音频和视频都隐藏底部迷你播放条，控制由共享 Popup 提供。
         BottomHost.IsVisible = !isImmersive;
+
+        UpdateImmersiveChrome();
 
         if (isImmersive)
         {
             SetNavigationOverlay(false);
-
-            if (isImmersiveAudio)
-            {
-                if (_window is not null && _window.WindowState != WindowState.FullScreen)
-                {
-                    _restoreWindowState = _window.WindowState == WindowState.Maximized
-                        ? WindowState.Maximized
-                        : WindowState.Normal;
-                    _immersiveFullScreen = true;
-                    _window.WindowState = WindowState.FullScreen;
-                }
-            }
-            else if (_immersiveFullScreen && _window is not null)
-            {
-                // 音频沉浸切到视频时退出系统全屏，保留可拖动的标题栏。
-                _window.WindowState = _restoreWindowState;
-                _immersiveFullScreen = false;
-            }
-        }
-        else if (_immersiveFullScreen && _window is not null)
-        {
-            _window.WindowState = _restoreWindowState;
-            _immersiveFullScreen = false;
         }
 
         UpdateVideoStage();
     }
 
+    /// <summary>
+    /// 播放页普通状态下保留标题栏；系统全屏时隐藏标题栏，让视频/封面真正铺满屏幕。
+    /// 不使用 Topmost，也不在 Avalonia 主窗口内叠加原生视频；底部 Popup 控件保留。
+    /// </summary>
+    private void UpdateImmersiveChrome()
+    {
+        var isImmersive = _viewModel?.IsImmersiveOpen == true;
+        var isPlayerFullscreen = isImmersive && _playerFullScreen;
+
+        TitleBarStrip.IsVisible = !isPlayerFullscreen;
+        ShellGrid.RowDefinitions[0].Height = new GridLength(isPlayerFullscreen ? 0 : 48);
+        MainRoot.Classes.Set("player-fullscreen", isPlayerFullscreen);
+
+        if (_viewModel is not null)
+        {
+            _viewModel.PlayerBar.IsFullscreen = _playerFullScreen;
+        }
+    }
+
+    private void OnFullscreenToggleRequested(object? sender, EventArgs e)
+    {
+        TogglePlayerFullscreen();
+    }
+
+    /// <summary>Popup 内的 Esc 和主窗口保持同一顺序：先退全屏，再退播放页。</summary>
+    private void OnPlayerControlsEscapeRequested(object? sender, EventArgs e)
+    {
+        if (_viewModel?.IsImmersiveOpen != true)
+        {
+            return;
+        }
+
+        if (_playerFullScreen)
+        {
+            ExitPlayerFullscreen();
+        }
+        else
+        {
+            _viewModel.CloseImmersive();
+        }
+    }
+
+    private void TogglePlayerFullscreen()
+    {
+        if (_viewModel?.IsImmersiveOpen != true)
+        {
+            return;
+        }
+
+        if (_playerFullScreen)
+        {
+            ExitPlayerFullscreen();
+            return;
+        }
+
+        if (_window is null)
+        {
+            return;
+        }
+
+        _restoreWindowState = _window.WindowState == WindowState.Maximized
+            ? WindowState.Maximized
+            : WindowState.Normal;
+        _playerFullScreen = true;
+        WindowAppearance.SetPlayerFullScreen(true);
+        _window.WindowState = WindowState.FullScreen;
+        UpdateImmersiveChrome();
+
+        // Popup 里的按钮不抢焦点；切换全屏后把键盘焦点还给播放页，保证 Esc 可用。
+        _window.Activate();
+    }
+
+    private void ExitPlayerFullscreen(bool updateChrome = true)
+    {
+        if (!_playerFullScreen)
+        {
+            return;
+        }
+
+        _playerFullScreen = false;
+        WindowAppearance.SetPlayerFullScreen(false);
+        if (_window is not null && _window.WindowState == WindowState.FullScreen)
+        {
+            _window.WindowState = _restoreWindowState;
+        }
+
+        if (updateChrome)
+        {
+            UpdateImmersiveChrome();
+        }
+
+        _window?.Activate();
+    }
+
     private void ResetImmersiveVisuals()
     {
         _immersiveApplied = null;
-        _immersiveFullScreen = false;
+        _playerFullScreen = false;
+        WindowAppearance.SetPlayerFullScreen(false);
         _immersiveLayerToken++;
         ImmersiveLayer.IsVisible = false;
         ImmersiveLayer.Opacity = 0;
         MainRoot.Classes.Set("immersive", false);
-        MainRoot.Classes.Set("video-immersive", false);
+        MainRoot.Classes.Set("player-immersive", false);
+        MainRoot.Classes.Set("player-fullscreen", false);
         TitleBarStrip.IsVisible = true;
         ShellGrid.RowDefinitions[0].Height = new GridLength(48);
         BottomHost.IsVisible = true;
+
+        if (_viewModel is not null)
+        {
+            _viewModel.PlayerBar.IsFullscreen = false;
+        }
     }
 
     /// <summary>音频沉浸层淡入/缩放；关闭时先淡出再折叠，避免硬切。</summary>
@@ -818,6 +938,12 @@ public partial class MainView : UserControl
         SetNavigationOverlay(false);
     }
 
+    /// <summary>窄栏搜索按钮：展开面板/抽屉后聚焦搜索框。</summary>
+    private void OnCompactSearchClick(object? sender, RoutedEventArgs e)
+    {
+        FocusSearch();
+    }
+
     private void OnSearchBoxKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter)
@@ -902,7 +1028,15 @@ public partial class MainView : UserControl
 
         if (_viewModel?.IsImmersiveOpen == true)
         {
-            _viewModel.CloseImmersive();
+            if (_playerFullScreen)
+            {
+                ExitPlayerFullscreen();
+            }
+            else
+            {
+                _viewModel.CloseImmersive();
+            }
+
             e.Handled = true;
         }
         else if (_isNavigationOverlayOpen)

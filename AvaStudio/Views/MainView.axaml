@@ -33,7 +33,7 @@
             Orientation="Horizontal"
             Spacing="6"
             VerticalAlignment="Center"
-            IsVisible="{Binding !IsImmersiveVideo}">
+            IsVisible="{Binding !IsImmersiveOpen}">
             <!-- 窄屏汉堡；展开/紧凑模式使用导航面板头的按钮。 -->
             <Button x:Name="NavToggleButton"
               Classes="icon-tool"
@@ -56,25 +56,32 @@
               VerticalAlignment="Center" />
           </StackPanel>
 
-          <!-- 视频沉浸标题栏：保留窗口拖动与右侧窗口按钮，只把应用名换成退出和片名。 -->
-          <StackPanel x:Name="VideoTitleBarLeft"
+          <!-- 独立播放页标题栏：音视频共用，只保留退出、媒体图标、片名和窗口按钮。 -->
+          <StackPanel x:Name="PlayerTitleBarLeft"
             Orientation="Horizontal"
             Spacing="8"
             Margin="12,0,0,0"
             VerticalAlignment="Center"
-            IsVisible="{Binding IsImmersiveVideo}">
+            IsVisible="{Binding IsImmersiveOpen}">
             <Button Classes="icon-tool"
               Command="{Binding PlayerBar.ToggleImmersiveCommand}"
               chrome:WindowDecorationProperties.ElementRole="User"
-              AutomationProperties.Name="退出视频播放"
-              ToolTip.Tip="退出视频播放（Esc）">
+              AutomationProperties.Name="退出播放页（Esc）"
+              ToolTip.Tip="退出播放页（Esc）">
               <fi:SymbolIcon Symbol="ChevronDown" FontSize="18" />
             </Button>
+
+            <fi:SymbolIcon Symbol="MusicNote2"
+              FontSize="16"
+              Foreground="{DynamicResource SystemControlHighlightAccentBrush}"
+              VerticalAlignment="Center"
+              IsVisible="{Binding IsImmersiveAudio}" />
 
             <fi:SymbolIcon Symbol="Video"
               FontSize="16"
               Foreground="{DynamicResource SystemControlHighlightAccentBrush}"
-              VerticalAlignment="Center" />
+              VerticalAlignment="Center"
+              IsVisible="{Binding IsImmersiveVideo}" />
 
             <TextBlock Text="{Binding PlayerBar.Title}"
               MaxWidth="520"
@@ -192,13 +199,24 @@
               PlaceholderText="搜索"
               AutomationProperties.Name="搜索"
               KeyDown="OnSearchBoxKeyDown" />
-            <fi:SymbolIcon Symbol="Search"
+
+            <fi:SymbolIcon x:Name="SearchGlyph"
+              Symbol="Search"
               FontSize="14"
               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
               HorizontalAlignment="Left"
               VerticalAlignment="Center"
               Margin="10,0,0,0"
               IsHitTestVisible="False" />
+
+            <!-- 窄栏保留同高的搜索入口，避免折叠时行高跳变。 -->
+            <Button x:Name="CompactSearchButton"
+              Classes="icon-tool"
+              Click="OnCompactSearchClick"
+              AutomationProperties.Name="搜索"
+              ToolTip.Tip="搜索">
+              <fi:SymbolIcon Symbol="Search" FontSize="14" />
+            </Button>
           </Grid>
 
           <ListBox x:Name="NavigationList"
@@ -320,7 +338,8 @@
             IsVisible="False"
             Background="Transparent"
             ClipToBounds="True">
-            <views:ImmersivePlayerView DataContext="{Binding PlayerBar}" />
+            <views:ImmersivePlayerView DataContext="{Binding PlayerBar}"
+              DoubleTapped="OnImmersiveSurfaceDoubleTapped" />
           </Border>
         </Grid>
 
@@ -381,21 +400,22 @@
       </Grid>
     </Grid>
 
-    <!-- 视频沉浸底部控制：独立 Popup 作为拥有窗口，显示在原生视频子窗口之上。
-         控件全部不抢焦点，Esc 仍由 MainView 处理。 -->
-    <Popup x:Name="VideoStageControlsPopup"
-      PlacementTarget="{Binding #VideoHost}"
+    <!-- 独立播放页底部控制：音频和视频共用；Popup 是拥有窗口，
+         可以显示在原生视频子窗口之上。控件全部不抢焦点，Esc 仍由 MainView 处理。 -->
+    <Popup x:Name="PlayerControlsPopup"
+      PlacementTarget="{Binding #ContentHost}"
       Placement="AnchorAndGravity"
       PlacementAnchor="BottomLeft"
       PlacementGravity="BottomLeft"
       PlacementConstraintAdjustment="SlideX,SlideY"
       HorizontalOffset="0"
       VerticalOffset="0"
-      Width="{Binding #VideoHost.Bounds.Width}"
+      Width="{Binding #ContentHost.Bounds.Width}"
       IsLightDismissEnabled="False"
       WindowManagerAddShadowHint="False"
-      IsOpen="{Binding IsImmersiveVideo}">
-      <views:VideoStageControlsView DataContext="{Binding PlayerBar}" />
+      IsOpen="{Binding IsImmersiveOpen}">
+      <views:VideoStageControlsView DataContext="{Binding PlayerBar}"
+        EscapeRequested="OnPlayerControlsEscapeRequested" />
     </Popup>
 
     <!-- 无边框窗口的缩放握把；每条边都标记对应的 Win32 非客户区角色。 -->

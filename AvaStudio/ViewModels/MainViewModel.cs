@@ -171,13 +171,13 @@ public sealed partial class MainViewModel : ViewModelBase
             return;
         }
 
-        if (!_restoringNavigation)
-        {
-            ClearBackStack();
-        }
-
         if (!ReferenceEquals(SelectedPage, value.Page))
         {
+            if (!_restoringNavigation)
+            {
+                PushBack(SelectedPage);
+            }
+
             SelectedPage = value.Page;
         }
     }
@@ -307,7 +307,6 @@ public sealed partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void GoToQueue()
     {
-        ClearBackStack();
         SelectedNavigationItem = NavigationItems.First(item => ReferenceEquals(item.Page, QueuePage));
         IsStatusVisible = false;
     }
@@ -355,11 +354,22 @@ public sealed partial class MainViewModel : ViewModelBase
 
         if (trackHistory && !ReferenceEquals(SelectedPage, page))
         {
-            _backStack.Push(SelectedPage);
-            RaiseBackState();
+            PushBack(SelectedPage);
         }
 
         SelectedPage = page;
+    }
+
+    /// <summary>记录上一页；连续打开同一页时不重复入栈。</summary>
+    private void PushBack(PageViewModelBase page)
+    {
+        if (_backStack.Count > 0 && ReferenceEquals(_backStack.Peek(), page))
+        {
+            return;
+        }
+
+        _backStack.Push(page);
+        RaiseBackState();
     }
 
     private void ShowMusicPage()

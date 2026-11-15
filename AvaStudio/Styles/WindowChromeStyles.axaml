@@ -1,13 +1,13 @@
 <Styles xmlns="https://github.com/avaloniaui"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-  <!-- 自定义标题栏使用 Tall 48 DIP 高度；caption 命中区铺满标题行，
-       与系统 Tall 标题栏一致。除关闭按钮的标准 Windows 红色悬停外，
+  <!-- 自定义标题栏保持 48 DIP 高；caption 按钮按 Windows 设置风格
+       收成 46×32 并在行内垂直居中。除关闭按钮的标准 Windows 红色悬停外，
        所有颜色都来自 Fluent 主题资源。 -->
   <Style Selector="Button.caption">
     <Setter Property="Width" Value="46" />
-    <Setter Property="Height" Value="48" />
-    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="CornerRadius" Value="0" />
     <Setter Property="Background" Value="Transparent" />

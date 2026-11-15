@@ -4,6 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using AvaStudio.Services.Library;
+using AvaStudio.Services.Shell;
 using AvaStudio.ViewModels;
 using AvaStudio.Views;
 
@@ -59,6 +60,13 @@ public partial class App : Application
 
             // 命令行/资源管理器传入媒体文件时，等窗口打开（视频输出已挂接）后再进入独立播放页。
             AttachExternalMediaOpen(desktop);
+
+            // 后续进程通过命名管道转发文件/激活请求；先订阅再取走启动阶段积压的消息。
+            SingleInstanceService.ArgumentsReceived += OnSingleInstanceArguments;
+            foreach (var arguments in SingleInstanceService.DrainPending())
+            {
+                OnSingleInstanceArguments(arguments);
+            }
         }
         else if (ApplicationLifetime is IActivityApplicationLifetime singleViewFactoryApplicationLifetime)
         {
@@ -78,78 +86,25 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    /// <summary>托盘图标点击：播放/暂停。</summary>
-    private void OnPlayPauseClick(object? sender, EventArgs e)
+    /// <summary>后续实例的激活/文件打开请求切回 UI 线程处理。</summary>
+    private void OnSingleInstanceArguments(string[] arguments)
     {
-        if (_mainViewModel?.PlayerBar.TogglePlayPauseCommand.CanExecute(null) == true)
-        {
-            _mainViewModel.PlayerBar.TogglePlayPauseCommand.Execute(null);
-        }
+        Dispatcher.UIThread.Post(() => _ = HandleSingleInstanceAsync(arguments));
     }
 
-    /// <summary>托盘菜单：显示主窗口。</summary>
-    private void OnShowWindowClick(object? sender, EventArgs e)
+    private async Task HandleSingleInstanceAsync(string[] arguments)
     {
-        ShowMainWindow();
-    }
-
-    /// <summary>托盘菜单：切换到轻量模式（隐藏主窗口，保留托盘与播放）。</summary>
-    private void OnLightweightModeClick(object? sender, EventArgs e)
-    {
-        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop
-            || desktop.MainWindow is not { } window)
+        if (_mainViewModel is null)
         {
             return;
         }
 
-        if (window.IsVisible)
-        {
-            window.Hide();
-            if (sender is NativeMenuItem item)
-            {
-                item.IsChecked = true;
-            }
-        }
-        else
-        {
-            ShowMainWindow();
-            if (sender is NativeMenuItem item)
-            {
-                item.IsChecked = false;
-            }
-        }
-    }
+        ShowMainWindow();
 
-    /// <summary>托盘菜单：上一首。</summary>
-    private void OnPreviousTrackClick(object? sender, EventArgs e)
-    {
-        if (_mainViewModel?.PlayerBar.PreviousCommand.CanExecute(null) == true)
+        var path = FindExternalMediaPath(arguments);
+        if (path is not null)
         {
-            _mainViewModel.PlayerBar.PreviousCommand.Execute(null);
-        }
-    }
-
-    /// <summary>托盘菜单：下一首。</summary>
-    private void OnNextTrackClick(object? sender, EventArgs e)
-    {
-        if (_mainViewModel?.PlayerBar.NextCommand.CanExecute(null) == true)
-        {
-            _mainViewModel.PlayerBar.NextCommand.Execute(null);
-        }
-    }
-
-    /// <summary>托盘菜单：释放播放会话并退出。</summary>
-    private void OnExitClick(object? sender, EventArgs e)
-    {
-        if (_mainViewModel is not null)
-        {
-            _ = _mainViewModel.DisposeAsync();
-            _mainViewModel = null;
-        }
-
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-        {
-            desktop.Shutdown();
+            await OpenExternalMediaAsync(path).ConfigureAwait(true);
         }
     }
 
@@ -161,8 +116,16 @@ public partial class App : Application
             return;
         }
 
-        window.Show();
-        window.WindowState = WindowState.Normal;
+        if (!window.IsVisible)
+        {
+            window.Show();
+        }
+
+        if (window.WindowState == WindowState.Minimized)
+        {
+            window.WindowState = WindowState.Normal;
+        }
+
         window.Activate();
     }
 
