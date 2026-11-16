@@ -16,4 +16,14 @@ public abstract class PageViewModelBase : ViewModelBase
 
     /// <summary>导航项使用的图标。</summary>
     public Symbol Symbol { get; }
+
+    /// <summary>页面成为当前页时调用；页面视图可能刚刚重建。</summary>
+    public virtual void OnNavigatedTo()
+    {
+    }
+
+    /// <summary>页面离开时调用；缓存页面视图会在这里释放封面等大对象。</summary>
+    public virtual void OnNavigatedFrom()
+    {
+    }
 }

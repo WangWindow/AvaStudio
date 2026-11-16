@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -35,7 +37,6 @@ public partial class MainView : UserControl
     private string _layoutMode = "expanded";
     private bool _isNavigationOverlayOpen;
     private bool _isPaneCollapsed;
-    private bool _prewarmed;
     private int _immersiveLayerToken;
     private bool? _immersiveApplied;
     private int _playerControlsVisibilityToken;
@@ -45,6 +46,7 @@ public partial class MainView : UserControl
     private bool _immersiveClickPending;
     private WindowState _restoreWindowState = WindowState.Normal;
     private MainViewModel? _viewModel;
+    private PageViewModelBase? _currentPage;
     private Window? _window;
     private IVideoOutput? _videoOutput;
     private bool? _videoStageApplied;
@@ -93,9 +95,6 @@ public partial class MainView : UserControl
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
         AttachToWindow(TopLevel.GetTopLevel(this) as Window);
-
-        // 后台预热主导航页面视图，避免首次点击时同步构建整页内容。
-        Dispatcher.UIThread.Post(PrewarmPageViews, DispatcherPriority.Background);
     }
 
     private void OnNavigationListContainerPrepared(object? sender, ContainerPreparedEventArgs e)
@@ -511,7 +510,6 @@ public partial class MainView : UserControl
             ApplyImmersiveState(_viewModel.IsImmersiveOpen);
             UpdateVideoStage();
             UpdateImmersiveAudioLayer(immediate: true);
-            Dispatcher.UIThread.Post(PrewarmPageViews, DispatcherPriority.Background);
         }
     }
 
@@ -582,18 +580,44 @@ public partial class MainView : UserControl
         // 换页时把播放控制复位为可见；非沉浸状态下该调用会被忽略。
         ShowPlayerControls();
 
+        // 只保留当前页面的视觉树。专辑/艺术家网格不是虚拟化面板，
+        // 隐藏页面仍会保留全部卡片和封面，播放视频时会叠出数百 MB。
+        if (!ReferenceEquals(_currentPage, page))
+        {
+            var previousPage = _currentPage;
+            foreach (var cached in _pageViews.ToList())
+            {
+                cached.Value.IsVisible = false;
+                if (cached.Value is UserControl userControl)
+                {
+                    // 先断开页面内容，让非虚拟化网格里的卡片和渲染资源立即失去引用。
+                    userControl.Content = null;
+                }
+
+                cached.Value.DataContext = null;
+                PageLayer.Children.Remove(cached.Value);
+            }
+
+            // 页面视图断开后再释放 ViewModel 内容，避免清空集合触发一次无用的布局。
+            previousPage?.OnNavigatedFrom();
+            _pageViews.Clear();
+            _currentPage = page;
+            page.OnNavigatedTo();
+
+            // 页面视图和封面位图包含大量非托管资源，离开页面后主动回收一次，
+            // 避免播放视频时仍把上一页的 Skia 位图留在私有内存里。
+            _ = Task.Run(static () =>
+            {
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: false);
+                GC.WaitForPendingFinalizers();
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: false);
+            });
+        }
+
         var view = EnsurePageView(page);
         if (view is null)
         {
             return;
-        }
-
-        foreach (var child in PageLayer.Children)
-        {
-            if (!ReferenceEquals(child, view))
-            {
-                child.IsVisible = false;
-            }
         }
 
         if (view.IsVisible)
@@ -657,21 +681,6 @@ public partial class MainView : UserControl
         ArtistDetailPageViewModel => new ArtistDetailPageView(),
         _ => null,
     };
-
-    /// <summary>后台预热主导航页面视图（隐藏状态），首次点击只做显示和布局。</summary>
-    private void PrewarmPageViews()
-    {
-        if (_prewarmed || _viewModel is null)
-        {
-            return;
-        }
-
-        _prewarmed = true;
-        foreach (var item in _viewModel.NavigationItems)
-        {
-            EnsurePageView(item.Page);
-        }
-    }
 
     /// <summary>
     /// 独立播放页：音视频共用 32 DIP 标题栏和窗口边框；系统全屏只由播放页或

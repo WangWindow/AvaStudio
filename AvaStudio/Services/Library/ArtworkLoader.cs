@@ -20,6 +20,19 @@ public sealed class ArtworkLoader
 
     private readonly ConcurrentDictionary<string, Bitmap?> _cache = new(StringComparer.OrdinalIgnoreCase);
 
+    // 页面离开后仍可能有解码任务在跑；递增版本让它们不要回填已经清空的缓存。
+    private int _generation;
+
+    /// <summary>
+    /// 清空缓存引用。不主动 Dispose 位图：页面 ViewModel 可能仍持有同一张图，
+    /// 由 GC 在最后一个引用释放后回收，避免正在显示时被释放。
+    /// </summary>
+    public void Clear()
+    {
+        _cache.Clear();
+        Interlocked.Increment(ref _generation);
+    }
+
     /// <summary>异步加载封面；路径为空、文件不存在或解码失败时返回 null。</summary>
     public Task<Bitmap?> LoadAsync(string? path, int decodeWidth)
     {
@@ -34,11 +47,16 @@ public sealed class ArtworkLoader
             return Task.FromResult(cached);
         }
 
+        var generation = Volatile.Read(ref _generation);
         return Task.Run(
             () =>
             {
                 var bitmap = Decode(path, decodeWidth);
-                _cache[key] = bitmap;
+                if (generation == Volatile.Read(ref _generation))
+                {
+                    _cache[key] = bitmap;
+                }
+
                 return bitmap;
             });
     }

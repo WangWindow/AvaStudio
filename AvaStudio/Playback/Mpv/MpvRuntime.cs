@@ -134,12 +134,40 @@ public sealed class MpvRuntime : IAsyncDisposable
         SetOption(context, "osc", "no");
         SetOption(context, "audio-client-name", "AvaStudio");
 
+        // 当前播放入口都是本地文件。libmpv 默认会为解复用缓存预留上百 MiB，
+        // 并把大量解码帧留在内存里；这里按本地播放收紧缓存和线程数。
+        SetOption(context, "cache", "no");
+        SetOption(context, "demuxer-max-bytes", "16MiB");
+        SetOption(context, "demuxer-max-back-bytes", "4MiB");
+        SetOption(context, "demuxer-readahead-secs", "2");
+        SetOption(context, "cache-secs", "2");
+        SetOption(context, "vd-lavc-threads", "2");
+        SetOption(context, "audio-buffer", "0.2");
+
+        // 软件渲染默认的双线性缩放在高分辨率素材上会明显发软；
+        // zimg/lanczos 只在渲染目标尺寸变化时工作，额外 CPU 开销可控。
+        SetOption(context, "sws-scaler", "lanczos");
+        SetOption(context, "sws-allow-zimg", "yes");
+        SetOption(context, "zimg-scaler", "lanczos");
+        SetOption(context, "zimg-scaler-param-a", "3");
+        SetOption(context, "video-output-levels", "full");
+
+        // OpenGL render API 使用的 GPU 缩放参数；软件渲染会自动忽略这些选项。
+        SetOption(context, "scale", "ewa_lanczossharp");
+        SetOption(context, "cscale", "ewa_lanczossoft");
+        SetOption(context, "dscale", "mitchell");
+        SetOption(context, "correct-downscaling", "yes");
+        SetOption(context, "linear-downscaling", "yes");
+        SetOption(context, "sigmoid-upscaling", "yes");
+
         if (videoOutput is IMpvRenderVideoOutput renderOutput)
         {
             // 视频由应用自己绘制成 Avalonia 内容，不创建原生窗口。
             // OpenGL 路径可以保留硬件解码；软件路径必须使用 CPU 可读帧。
             SetOption(context, "vo", "libmpv");
-            SetOption(context, "hwdec", renderOutput.UsesOpenGl ? "auto-safe" : "no");
+            // 软件 render API 需要 CPU 可读帧。auto-copy 在本机反而多一层
+            // D3D11 回传缓冲，因此保持软件解码，由渲染层限制帧缓冲。
+            SetOption(context, "hwdec", "no");
         }
         else
         {

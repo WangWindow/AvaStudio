@@ -33,6 +33,8 @@ public sealed partial class MusicPageViewModel : PageViewModelBase
     private readonly Action<AlbumGroup> _openAlbum;
     private readonly Action<ArtistGroup> _openArtist;
     private readonly List<MediaItemViewModel> _allSongs = [];
+    private bool _contentBuilt;
+    private bool _isActive;
 
     public MusicPageViewModel(
         AppServices services,
@@ -47,7 +49,6 @@ public sealed partial class MusicPageViewModel : PageViewModelBase
         _reportStatus = reportStatus;
         _services.Library.Changed += OnLibraryChanged;
         _services.Settings.Changed += OnSettingsChanged;
-        Rebuild();
     }
 
     /// <summary>按当前排序筛选后的歌曲。</summary>
@@ -170,6 +171,101 @@ public sealed partial class MusicPageViewModel : PageViewModelBase
     partial void OnSelectedSectionChanged(MusicSection value)
     {
         RaiseSectionProperties();
+        ReleaseInactiveSectionArtwork(value);
+        EnsureSectionArtwork();
+    }
+
+    /// <summary>切换分区时释放另一个分区的封面，避免专辑和艺术家封面同时常驻。</summary>
+    private void ReleaseInactiveSectionArtwork(MusicSection activeSection)
+    {
+        if (activeSection != MusicSection.Albums)
+        {
+            foreach (var album in Albums)
+            {
+                album.ReleaseArtwork();
+            }
+        }
+
+        if (activeSection != MusicSection.Artists)
+        {
+            foreach (var artist in Artists)
+            {
+                artist.ReleaseArtwork();
+            }
+        }
+
+        _services.ArtworkLoader.Clear();
+    }
+
+    /// <summary>
+    /// 进入音乐页时才构建歌曲/专辑/艺术家视图模型；离开时整体释放。
+    /// 专辑和艺术家网格即使虚拟化，几百个卡片 ViewModel 也会长期占用内存。
+    /// </summary>
+    public override void OnNavigatedTo()
+    {
+        _isActive = true;
+        if (!_contentBuilt)
+        {
+            Rebuild();
+        }
+
+        EnsureSectionArtwork();
+    }
+
+    /// <summary>离开音乐页时释放封面、分组和全部卡片视图模型。</summary>
+    public override void OnNavigatedFrom()
+    {
+        _isActive = false;
+        ReleaseArtwork();
+        ReleaseContent();
+    }
+
+    /// <summary>释放封面引用，清空全局图片缓存引用，等待 GC 回收。</summary>
+    private void ReleaseArtwork()
+    {
+        foreach (var album in Albums)
+        {
+            album.ReleaseArtwork();
+        }
+
+        foreach (var artist in Artists)
+        {
+            artist.ReleaseArtwork();
+        }
+
+        _services.ArtworkLoader.Clear();
+    }
+
+    /// <summary>清空三个分区的视图模型和分组；返回音乐页时由快照重新构建。</summary>
+    private void ReleaseContent()
+    {
+        _allSongs.Clear();
+        Songs.Clear();
+        SongEntries.Clear();
+        Albums.Clear();
+        AlbumGroups.Clear();
+        Artists.Clear();
+        ArtistGroups.Clear();
+        _contentBuilt = false;
+    }
+
+    /// <summary>按当前分区懒加载封面；切回已加载的分区时不会重复解码。</summary>
+    private void EnsureSectionArtwork()
+    {
+        if (SelectedSection == MusicSection.Albums)
+        {
+            foreach (var album in Albums)
+            {
+                _ = album.LoadArtworkAsync();
+            }
+        }
+        else if (SelectedSection == MusicSection.Artists)
+        {
+            foreach (var artist in Artists)
+            {
+                _ = artist.LoadArtworkAsync();
+            }
+        }
     }
 
     partial void OnSelectedSortIndexChanged(int value)
@@ -287,7 +383,6 @@ public sealed partial class MusicPageViewModel : PageViewModelBase
                      .OrderBy(static album => LibraryTextSort.GetSortKey(album.Name), StringComparer.OrdinalIgnoreCase)
                      .ThenBy(static album => album.Name, StringComparer.CurrentCultureIgnoreCase))
         {
-            _ = viewModel.LoadArtworkAsync();
             Albums.Add(viewModel);
         }
 
@@ -301,13 +396,13 @@ public sealed partial class MusicPageViewModel : PageViewModelBase
                      .OrderBy(static artist => LibraryTextSort.GetSortKey(artist.Name), StringComparer.OrdinalIgnoreCase)
                      .ThenBy(static artist => artist.Name, StringComparer.CurrentCultureIgnoreCase))
         {
-            _ = viewModel.LoadArtworkAsync();
             Artists.Add(viewModel);
         }
 
         BuildLibraryGroups();
         RaiseSectionProperties();
         RandomPlayCommand.NotifyCanExecuteChanged();
+        _contentBuilt = true;
     }
 
     /// <summary>按首字母构建专辑与艺术家分组，保持与歌曲列表一致的分组顺序。</summary>
@@ -432,7 +527,15 @@ public sealed partial class MusicPageViewModel : PageViewModelBase
 
     private void OnLibraryChanged(object? sender, EventArgs e)
     {
-        Rebuild();
+        // 页面未显示时不重建；下次进入会按最新快照构建。
+        if (_isActive)
+        {
+            Rebuild();
+        }
+        else
+        {
+            _contentBuilt = false;
+        }
     }
 
     private void OnSettingsChanged(object? sender, EventArgs e)

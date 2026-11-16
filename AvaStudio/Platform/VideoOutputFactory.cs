@@ -14,8 +14,10 @@ public static class VideoOutputFactory
     public static IVideoOutput Create()
     {
 #if WINDOWS
-        // Windows 统一使用软件 render API：视频成为普通 Avalonia 内容，
-        // 不再创建原生子窗口，点击/双击/全屏/跨屏布局都由 Avalonia 处理。
+        // Windows 使用软件 render API：视频是普通 Avalonia 内容，
+        // 不创建原生子窗口，点击/双击/全屏/跨屏布局都由 Avalonia 处理。
+        // ANGLE/OpenGL render API 在本机 Intel 驱动上私有内存反而高很多，
+        // 因此不作为默认路径。
         return new SoftwareVideoOutput();
 #elif LINUX
         var software = string.Equals(

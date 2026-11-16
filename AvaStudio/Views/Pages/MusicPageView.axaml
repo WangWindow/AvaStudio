@@ -181,11 +181,17 @@
     <Grid Grid.Row="2" IsVisible="{Binding IsAlbumsSelected}">
       <Grid IsVisible="{Binding HasAlbums}">
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-          <StackPanel Margin="40,0,40,32">
-            <ItemsControl ItemsSource="{Binding AlbumGroups}"
-              HorizontalAlignment="Stretch"
-              ItemContainerTheme="{StaticResource LibraryRowContainer}">
-              <ItemsControl.ItemTemplate>
+          <!-- 外层按字母分组虚拟化，只实现视口内的分组；组内再换行排列封面。 -->
+          <ItemsControl ItemsSource="{Binding AlbumGroups}"
+            Margin="40,0,40,32"
+            HorizontalAlignment="Stretch"
+            ItemContainerTheme="{StaticResource LibraryRowContainer}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <VirtualizingStackPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="items:AlbumLetterGroup">
                   <StackPanel>
                     <TextBlock Classes="group-header" Text="{Binding Header}" />
@@ -238,9 +244,8 @@
                     </ItemsControl>
                   </StackPanel>
                 </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </StackPanel>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
         </ScrollViewer>
       </Grid>
     </Grid>
@@ -249,11 +254,17 @@
     <Grid Grid.Row="2" IsVisible="{Binding IsArtistsSelected}">
       <Grid IsVisible="{Binding HasArtists}">
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-          <StackPanel Margin="40,0,40,32">
-            <ItemsControl ItemsSource="{Binding ArtistGroups}"
-              HorizontalAlignment="Stretch"
-              ItemContainerTheme="{StaticResource LibraryRowContainer}">
-              <ItemsControl.ItemTemplate>
+          <!-- 艺术家分组同样只实现视口内的字母组。 -->
+          <ItemsControl ItemsSource="{Binding ArtistGroups}"
+            Margin="40,0,40,32"
+            HorizontalAlignment="Stretch"
+            ItemContainerTheme="{StaticResource LibraryRowContainer}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <VirtualizingStackPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="items:ArtistLetterGroup">
                   <StackPanel>
                     <TextBlock Classes="group-header" Text="{Binding Header}" />
@@ -310,9 +321,8 @@
                     </ItemsControl>
                   </StackPanel>
                 </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </StackPanel>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
         </ScrollViewer>
       </Grid>
     </Grid>

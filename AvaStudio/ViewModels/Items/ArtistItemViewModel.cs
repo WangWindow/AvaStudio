@@ -12,6 +12,7 @@ namespace AvaStudio.ViewModels.Items;
 public sealed partial class ArtistItemViewModel : ViewModelBase
 {
     private readonly ArtworkLoader _artworkLoader;
+    private int _artworkVersion;
 
     public ArtistItemViewModel(
         ArtistGroup group,
@@ -55,11 +56,19 @@ public sealed partial class ArtistItemViewModel : ViewModelBase
             return;
         }
 
+        var version = _artworkVersion;
         var bitmap = await _artworkLoader.LoadAsync(Group.ArtworkPath, width).ConfigureAwait(true);
-        if (bitmap is not null)
+        if (bitmap is not null && version == _artworkVersion)
         {
             Artwork = bitmap;
         }
+    }
+
+    /// <summary>释放封面引用；离开音乐页时调用，避免封面缓存长期占用内存。</summary>
+    public void ReleaseArtwork()
+    {
+        _artworkVersion++;
+        Artwork = null;
     }
 
     partial void OnArtworkChanged(Bitmap? value)
