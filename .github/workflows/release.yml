@@ -214,6 +214,8 @@ jobs:
           output="$output_dir/AvaStudio-$version-${{ matrix.arch }}.AppImage"
           rm -f "$output"
 
+          chmod -R a+rX "$appdir"
+
           APPIMAGE_EXTRACT_AND_RUN=1 ARCH="${{ matrix.arch }}" VERSION="$version" \
             "$tool" --appimage-extract-and-run "$appdir" "$output"
           chmod +x "$output"
