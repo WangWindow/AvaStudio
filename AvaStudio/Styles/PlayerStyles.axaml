@@ -202,9 +202,10 @@
     <Setter Property="Background" Value="#26FFFFFF" />
   </Style>
 
+  <!-- 沉浸页沿用同一套扁平图标；播放/暂停不再用大号白色实心圆。 -->
   <Style Selector="Button.player-icon.immersive">
-    <Setter Property="Width" Value="36" />
-    <Setter Property="Height" Value="36" />
+    <Setter Property="Width" Value="32" />
+    <Setter Property="Height" Value="32" />
   </Style>
 
   <Style Selector="TextBlock.player-time.immersive">
@@ -212,20 +213,20 @@
   </Style>
 
   <Style Selector="Button.player-play.immersive">
-    <Setter Property="Width" Value="44" />
-    <Setter Property="Height" Value="44" />
-    <Setter Property="CornerRadius" Value="22" />
-    <Setter Property="Background" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}" />
+    <Setter Property="Width" Value="36" />
+    <Setter Property="Height" Value="36" />
+    <Setter Property="CornerRadius" Value="18" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
   </Style>
 
   <Style Selector="Button.player-play.immersive:pointerover">
-    <Setter Property="Background" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
-    <Setter Property="Opacity" Value="0.9" />
+    <Setter Property="Background" Value="#1AFFFFFF" />
+    <Setter Property="Opacity" Value="1" />
   </Style>
 
   <Style Selector="Button.player-play.immersive:pressed">
-    <Setter Property="Background" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
-    <Setter Property="Opacity" Value="0.82" />
+    <Setter Property="Background" Value="#26FFFFFF" />
+    <Setter Property="Opacity" Value="1" />
   </Style>
 </Styles>
