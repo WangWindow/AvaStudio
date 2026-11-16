@@ -497,6 +497,9 @@ public sealed partial class MainViewModel : ViewModelBase
             {
                 IsImmersiveOpen = false;
             }
+
+            // 4K/高码率视频结束后释放解码器和渲染上下文，避免空闲时保留大缓冲。
+            _services.Playback.ScheduleIdleTrim();
         }
     }
 

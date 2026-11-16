@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -431,6 +432,86 @@ public sealed class PlaybackCoordinator : IAsyncDisposable
         }
 
         StateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// 播放结束/停止后延迟释放 libmpv 会话和最后一帧；4K 解码/缩放缓冲
+    /// 会一直占用到会话销毁，自动切歌时则因进入 Opening 而跳过。
+    /// </summary>
+    public void ScheduleIdleTrim()
+    {
+        _ = Task.Run(
+            async () =>
+            {
+                await Task.Delay(1500).ConfigureAwait(false);
+                await TrimIdleSessionAsync().ConfigureAwait(false);
+            });
+    }
+
+    /// <summary>在播放未继续时释放会话；与 EnsureSession 共用会话锁。</summary>
+    private async Task TrimIdleSessionAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        await _sessionGate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (_session is null || _runtime is null)
+            {
+                return;
+            }
+
+            if (_snapshot.Phase is PlaybackPhase.Opening
+                or PlaybackPhase.Playing
+                or PlaybackPhase.Paused)
+            {
+                return;
+            }
+
+            var session = _session;
+            var runtime = _runtime;
+            _session = null;
+            _runtime = null;
+            session.SnapshotChanged -= OnSnapshotChanged;
+
+            try
+            {
+                await session.CloseAsync().ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                Debug.WriteLine($"[Playback] 关闭空闲播放会话失败：{exception.Message}");
+            }
+
+            try
+            {
+                await runtime.DisposeAsync().ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                Debug.WriteLine($"[Playback] 释放空闲播放引擎失败：{exception.Message}");
+            }
+
+            // 会话已销毁，保留 CurrentItem 但把引擎快照恢复为空闲；
+            // 下次按播放时 TogglePlayPause 会走 PlayCurrent 重新加载文件。
+            _snapshot = PlaybackSnapshot.Initial;
+            Dispatcher.UIThread.Post(
+                () => StateChanged?.Invoke(this, EventArgs.Empty),
+                DispatcherPriority.Background);
+
+            var output = _videoOutputAccessor();
+            if (output is not null)
+            {
+                Dispatcher.UIThread.Post(output.ReleaseFrame, DispatcherPriority.Background);
+            }
+        }
+        finally
+        {
+            _sessionGate.Release();
+        }
     }
 
     /// <summary>停止当前播放但保留队列与当前条目，允许重新播放。</summary>

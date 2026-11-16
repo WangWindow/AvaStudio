@@ -17,6 +17,14 @@ public interface IVideoOutput : IDisposable
 
     /// <summary>当前平台是否可以输出视频；不可用时播放层只输出音频。</summary>
     bool IsAvailable { get; }
+
+    /// <summary>
+    /// 释放最后一帧和渲染资源；播放停止/结束后调用，下次播放会重新创建。
+    /// 默认实现不做任何事，平台输出按需覆盖。
+    /// </summary>
+    void ReleaseFrame()
+    {
+    }
 }
 
 /// <summary>

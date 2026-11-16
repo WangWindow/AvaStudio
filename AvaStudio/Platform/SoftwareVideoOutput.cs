@@ -130,6 +130,22 @@ public sealed class SoftwareVideoOutput : IMpvRenderVideoOutput
         return Task.FromResult(true);
     }
 
+    /// <summary>释放最后一帧位图；播放结束/停止后由播放层调用。</summary>
+    public void ReleaseFrame()
+    {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(ReleaseFrame);
+            return;
+        }
+
+        var bitmap = _bitmap;
+        _bitmap = null;
+        _bitmapSize = default;
+        _image.Source = null;
+        bitmap?.Dispose();
+    }
+
     private void DetachRenderer()
     {
         MpvSoftwareRenderer? renderer;
