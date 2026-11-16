@@ -1,0 +1,254 @@
+name: Package release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without or with leading v (for example 1.0.0)"
+        required: true
+        default: "1.0.0"
+
+permissions:
+  contents: write
+
+env:
+  # Native runtime bundle release used by both packaging jobs.
+  LIBMPV_TAG: v0.42.0
+  # Tag builds use the tag (v1.2.3); manual builds use the input.
+  APP_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.version || '1.0.0' }}
+
+jobs:
+  windows:
+    name: Windows ${{ matrix.rid }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: win-x64
+            os: windows-2025
+            installer_platform: x64
+            bundle: libmpv-win-x64.zip
+          - rid: win-arm64
+            os: windows-11-arm
+            installer_platform: arm64
+            bundle: libmpv-win-arm64.zip
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "11.0.x"
+
+      - name: Download libmpv runtime bundle
+        shell: pwsh
+        run: |
+          $url = "https://github.com/WangWindow/libmpv-bundles/releases/download/$env:LIBMPV_TAG/${{ matrix.bundle }}"
+          Write-Host "Downloading $url"
+          Invoke-WebRequest -Uri $url -OutFile "$env:RUNNER_TEMP\libmpv.zip"
+
+          $extract = Join-Path $env:RUNNER_TEMP "libmpv-extract"
+          Remove-Item $extract -Recurse -Force -ErrorAction SilentlyContinue
+          Expand-Archive -Path "$env:RUNNER_TEMP\libmpv.zip" -DestinationPath $extract -Force
+
+          $target = Join-Path "runtimes\libmpv" "${{ matrix.rid }}"
+          New-Item -ItemType Directory -Path $target -Force | Out-Null
+          Copy-Item -Path (Join-Path $extract "*") -Destination $target -Recurse -Force
+
+          $dll = Join-Path $target "libmpv-2.dll"
+          if (-not (Test-Path -LiteralPath $dll)) {
+            Get-ChildItem -Path $extract -Recurse | Format-Table FullName
+            throw "libmpv-2.dll was not found in the ${{ matrix.bundle }} bundle."
+          }
+
+      - name: Build ZIP and MSI
+        shell: pwsh
+        run: |
+          $version = "$env:APP_VERSION".TrimStart("v")
+          if ([string]::IsNullOrWhiteSpace($version)) { $version = "1.0.0" }
+          ./scripts/package-windows.ps1 `
+            -Rid "${{ matrix.rid }}" `
+            -InstallerPlatform "${{ matrix.installer_platform }}" `
+            -Version $version
+
+      - name: Upload Windows packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.rid }}
+          path: |
+            artifacts/package/${{ matrix.rid }}/**/*.zip
+            artifacts/package/${{ matrix.rid }}/**/*.msi
+          if-no-files-found: error
+
+  linux:
+    name: Linux ${{ matrix.rid }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: linux-x64
+            os: ubuntu-24.04
+            arch: x86_64
+            bundle: libmpv-linux-x64.tar.gz
+          - rid: linux-arm64
+            os: ubuntu-24.04-arm
+            arch: aarch64
+            bundle: libmpv-linux-arm64.tar.gz
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "11.0.x"
+
+      - name: Install NativeAOT and AppImage tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang zlib1g-dev libicu-dev file squashfs-tools imagemagick zip
+
+      - name: Download libmpv runtime bundle
+        run: |
+          url="https://github.com/WangWindow/libmpv-bundles/releases/download/${LIBMPV_TAG}/${{ matrix.bundle }}"
+          echo "Downloading $url"
+          curl -fL --retry 3 --retry-delay 2 -o /tmp/libmpv.tar.gz "$url"
+          target="runtimes/libmpv/${{ matrix.rid }}"
+          mkdir -p "$target"
+          tar -xzf /tmp/libmpv.tar.gz -C "$target"
+          if [ ! -f "$target/libmpv.so.2" ]; then
+            find "$target" -maxdepth 3 -type f | sort
+            echo "libmpv.so.2 was not found in ${{ matrix.bundle }}" >&2
+            exit 1
+          fi
+
+      - name: Publish self-contained NativeAOT build
+        shell: bash
+        run: |
+          version="${APP_VERSION#v}"
+          publish="artifacts/publish/${{ matrix.rid }}"
+          rm -rf "$publish"
+          mkdir -p "$publish"
+          dotnet publish AvaStudio.Desktop/AvaStudio.Desktop.csproj \
+            -c Release \
+            -r "${{ matrix.rid }}" \
+            --self-contained true \
+            -p:PublishAot=true \
+            -p:Version="$version" \
+            -o "$publish"
+
+      - name: Build Linux ZIP
+        shell: bash
+        run: |
+          version="${APP_VERSION#v}"
+          publish="artifacts/publish/${{ matrix.rid }}"
+          output_dir="artifacts/package/linux-${{ matrix.rid }}"
+          mkdir -p "$output_dir"
+
+          if [ -f "$publish/AvaStudio.Desktop" ]; then
+            mv "$publish/AvaStudio.Desktop" "$publish/AvaStudio"
+          fi
+          if [ ! -x "$publish/AvaStudio" ]; then
+            echo "AvaStudio executable was not produced in $publish" >&2
+            find "$publish" -maxdepth 2 -type f | sort
+            exit 1
+          fi
+          chmod +x "$publish/AvaStudio"
+
+          mkdir -p "$publish/libmpv/${{ matrix.rid }}"
+          cp -a "runtimes/libmpv/${{ matrix.rid }}/." "$publish/libmpv/${{ matrix.rid }}/"
+
+          output="$PWD/$output_dir/AvaStudio-$version-${{ matrix.rid }}.zip"
+          rm -f "$output"
+          (cd "$publish" && zip -qr "$output" .)
+          echo "ZIP built: $output"
+
+      - name: Build AppImage
+        shell: bash
+        run: |
+          version="${APP_VERSION#v}"
+          publish="artifacts/publish/${{ matrix.rid }}"
+          appdir="artifacts/appimage/${{ matrix.rid }}/AppDir"
+          iconroot="AvaStudio/Assets"
+
+          rm -rf "$appdir"
+          mkdir -p \
+            "$appdir/usr/bin" \
+            "$appdir/usr/share/applications" \
+            "$appdir/usr/share/icons/hicolor/256x256/apps"
+
+          cp -a "$publish"/. "$appdir/usr/bin/"
+          if [ -f "$appdir/usr/bin/AvaStudio.Desktop" ]; then
+            mv "$appdir/usr/bin/AvaStudio.Desktop" "$appdir/usr/bin/AvaStudio"
+          fi
+          chmod +x "$appdir/usr/bin/AvaStudio"
+
+          mkdir -p "$appdir/usr/bin/libmpv/${{ matrix.rid }}"
+          cp -a "runtimes/libmpv/${{ matrix.rid }}"/. "$appdir/usr/bin/libmpv/${{ matrix.rid }}/"
+
+          cp scripts/linux/AppRun "$appdir/AppRun"
+          chmod +x "$appdir/AppRun"
+          cp scripts/linux/AvaStudio.desktop "$appdir/usr/share/applications/AvaStudio.desktop"
+          convert "$iconroot/Icon.png" -resize 256x256 "$appdir/usr/share/icons/hicolor/256x256/apps/avastudio.png"
+          cp "$appdir/usr/share/icons/hicolor/256x256/apps/avastudio.png" "$appdir/avastudio.png"
+
+          tool="$RUNNER_TEMP/appimagetool-${{ matrix.arch }}.AppImage"
+          curl -fL --retry 3 --retry-delay 2 \
+            -o "$tool" \
+            "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-${{ matrix.arch }}.AppImage"
+          chmod +x "$tool"
+
+          output_dir="artifacts/package/linux-${{ matrix.rid }}"
+          mkdir -p "$output_dir"
+          output="$output_dir/AvaStudio-$version-${{ matrix.arch }}.AppImage"
+          rm -f "$output"
+
+          APPIMAGE_EXTRACT_AND_RUN=1 ARCH="${{ matrix.arch }}" VERSION="$version" \
+            "$tool" --appimage-extract-and-run "$appdir" "$output"
+          chmod +x "$output"
+
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.rid }}
+          path: |
+            artifacts/package/linux-${{ matrix.rid }}/*.zip
+            artifacts/package/linux-${{ matrix.rid }}/*.AppImage
+          if-no-files-found: error
+
+  release:
+    name: Publish release assets
+    if: github.ref_type == 'tag'
+    needs:
+      - windows
+      - linux
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create or update GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            artifacts/**/*.zip
+            artifacts/**/*.msi
+            artifacts/**/*.AppImage

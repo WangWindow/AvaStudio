@@ -37,7 +37,9 @@ dotnet run --project AvaStudio.Desktop
 
 ```text
 runtimes/libmpv/win-x64/libmpv-2.dll
+runtimes/libmpv/win-arm64/libmpv-2.dll
 runtimes/libmpv/linux-x64/libmpv.so.2
+runtimes/libmpv/linux-arm64/libmpv.so.2
 ```
 
 构建时会自动复制到输出目录的 `libmpv/<rid>/`。
@@ -49,6 +51,20 @@ Linux 的 libmpv 还需要对应的运行依赖
 ```bash
 AVASTUDIO_LINUX_VIDEO=software dotnet run --project AvaStudio.Desktop
 ```
+
+## 自动打包
+
+GitHub Actions 工作流位于 [`.github/workflows/release.yml`](.github/workflows/release.yml)：
+
+- push `v*` tag 时构建并发布 Windows ZIP/MSI、Linux ZIP/AppImage。
+- 在 Actions 页面手动运行 `Package release` 可只生成构建产物。
+- 四套 libmpv 运行时包（Windows/Linux、x64/arm64）从
+  `WangWindow/libmpv-bundles` 的 `v0.42.0` release 下载：
+  `libmpv-win-x64.zip`、`libmpv-win-arm64.zip`、
+  `libmpv-linux-x64.tar.gz`、`libmpv-linux-arm64.tar.gz`。
+- 产物：Windows 为 `AvaStudio-<version>-<rid>.zip` / `.msi`；Linux 为
+  `AvaStudio-<version>-<rid>.zip` 和 `AvaStudio-<version>-<arch>.AppImage`。
+- Linux ZIP 解压后直接运行 `AvaStudio`；AppImage 需要可执行权限。
 
 ## 许可证
 

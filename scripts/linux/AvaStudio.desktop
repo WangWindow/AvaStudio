@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=AvaStudio
+Comment=Local audio and video player
+Exec=AvaStudio
+Icon=avastudio
+Terminal=false
+Categories=AudioVideo;Player;
+MimeType=audio/mpeg;audio/flac;audio/wav;audio/mp4;audio/ogg;audio/opus;video/mp4;video/x-matroska;video/quicktime;video/webm;
+StartupWMClass=AvaStudio

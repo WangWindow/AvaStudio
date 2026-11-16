@@ -1,0 +1,22 @@
+#!/bin/sh
+# AppImage entry point: keep libmpv and its private dependencies next to the
+# executable so the app-private loader can find them without system installs.
+set -eu
+
+APPDIR="${APPDIR:-$(dirname "$(readlink -f "$0")")}"
+
+case "$(uname -m)" in
+  x86_64|amd64) RID=linux-x64 ;;
+  aarch64|arm64) RID=linux-arm64 ;;
+  *)
+    echo "AvaStudio: unsupported architecture $(uname -m)" >&2
+    exit 1
+    ;;
+esac
+
+LIBMPV_DIR="$APPDIR/usr/bin/libmpv/$RID"
+if [ -d "$LIBMPV_DIR" ]; then
+  export LD_LIBRARY_PATH="$LIBMPV_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+fi
+
+exec "$APPDIR/usr/bin/AvaStudio" "$@"
