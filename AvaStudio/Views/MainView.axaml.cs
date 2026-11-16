@@ -683,8 +683,8 @@ public partial class MainView : UserControl
     };
 
     /// <summary>
-    /// 独立播放页：音视频共用 32 DIP 标题栏和窗口边框；系统全屏只由播放页或
-    /// 迷你播放条的全屏按钮触发，进入全屏时隐藏标题栏；播放控制覆盖在画面上并自动隐藏。
+    /// 独立播放页：视频页把标题栏覆盖在视频上，音频页保留实体标题栏；
+    /// 系统全屏隐藏标题栏，播放控制停在底部并自动隐藏。
     /// </summary>
     private void ApplyImmersiveState(bool isImmersive, bool force = false)
     {
@@ -721,17 +721,38 @@ public partial class MainView : UserControl
     }
 
     /// <summary>
-    /// 播放页普通状态下保留标题栏；系统全屏时隐藏标题栏，让视频/封面真正铺满屏幕。
-    /// 不使用 Topmost，也不单独弹出控制窗口；控制条覆盖在画面上并自动隐藏。
+    /// 视频播放页把标题栏移到内容行上方，只保留透明渐变；音频页保留实体标题栏；
+    /// 系统全屏隐藏标题栏。不使用 Topmost，也不单独弹出控制窗口。
     /// </summary>
     private void UpdateImmersiveChrome()
     {
         var isImmersive = _viewModel?.IsImmersiveOpen == true;
         var isPlayerFullscreen = IsPlayerFullScreen;
+        var isVideoOverlay = isImmersive
+            && _viewModel?.IsImmersiveVideo == true
+            && !isPlayerFullscreen;
 
         TitleBarStrip.IsVisible = !isPlayerFullscreen;
-        ShellGrid.RowDefinitions[0].Height = new GridLength(isPlayerFullscreen ? 0 : 32);
+        TitleBarStrip.ZIndex = isVideoOverlay ? 6 : 3;
         MainRoot.Classes.Set("player-fullscreen", isPlayerFullscreen);
+        MainRoot.Classes.Set("video-titlebar-overlay", isVideoOverlay);
+
+        if (isVideoOverlay)
+        {
+            // 视频页把标题栏移到内容行之上，视频从窗口顶边开始，
+            // 标题栏只保留半透明渐变，不再占用一整条实体表面。
+            Grid.SetRow(TitleBarStrip, 1);
+            TitleBarStrip.VerticalAlignment = VerticalAlignment.Top;
+            TitleBarStrip.Height = 32;
+            ShellGrid.RowDefinitions[0].Height = new GridLength(0);
+        }
+        else
+        {
+            Grid.SetRow(TitleBarStrip, 0);
+            TitleBarStrip.VerticalAlignment = VerticalAlignment.Stretch;
+            TitleBarStrip.Height = double.NaN;
+            ShellGrid.RowDefinitions[0].Height = new GridLength(isPlayerFullscreen ? 0 : 32);
+        }
 
         if (_viewModel is not null)
         {
@@ -958,6 +979,11 @@ public partial class MainView : UserControl
         MainRoot.Classes.Set("immersive", false);
         MainRoot.Classes.Set("player-immersive", false);
         MainRoot.Classes.Set("player-fullscreen", false);
+        MainRoot.Classes.Set("video-titlebar-overlay", false);
+        Grid.SetRow(TitleBarStrip, 0);
+        TitleBarStrip.VerticalAlignment = VerticalAlignment.Stretch;
+        TitleBarStrip.Height = double.NaN;
+        TitleBarStrip.ZIndex = 3;
         TitleBarStrip.IsVisible = true;
         ShellGrid.RowDefinitions[0].Height = new GridLength(32);
         BottomHost.IsVisible = true;

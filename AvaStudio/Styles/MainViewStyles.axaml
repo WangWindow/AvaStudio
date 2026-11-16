@@ -511,6 +511,17 @@
     <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
   </Style>
 
+  <!-- 视频播放页：标题栏覆盖在视频上，只保留顶部逐渐透明的暗色渐变。 -->
+  <Style Selector="Grid#MainRoot.video-titlebar-overlay Border#TitleBarStrip">
+    <Setter Property="Background">
+      <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#C2000000" Offset="0" />
+        <GradientStop Color="#72000000" Offset="0.65" />
+        <GradientStop Color="#00000000" Offset="1" />
+      </LinearGradientBrush>
+    </Setter>
+  </Style>
+
   <!-- 播放页退出按钮贴住窗口左上角，48×32 的整块命中区直达边缘且铺满标题栏。 -->
   <Style Selector="Button.immersive-titlebar-exit">
     <Setter Property="Width" Value="48" />
