@@ -83,6 +83,16 @@ public sealed class MpvRuntime : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// 确保应用私有 libmpv 已加载并安装 DllImport 解析器。
+    /// 缩略图提取等不经过播放会话的调用也需要先执行这一步。
+    /// </summary>
+    internal static void EnsureNativeLibraryLoaded()
+    {
+        INativeLibraryLocator locator = NativeLibraryLocator.CreateDefault();
+        EnsureLibraryLoaded(locator.ResolveLibraryPath());
+    }
+
     public async ValueTask DisposeAsync()
     {
         IntPtr context = Interlocked.Exchange(ref _context, IntPtr.Zero);
@@ -195,6 +205,11 @@ public sealed class MpvRuntime : IAsyncDisposable
     {
         lock (ResolverLock)
         {
+            if (s_libraryHandle != IntPtr.Zero)
+            {
+                return;
+            }
+
             s_libraryHandle = NativeLibrary.Load(libraryPath);
             if (!s_resolverInstalled)
             {

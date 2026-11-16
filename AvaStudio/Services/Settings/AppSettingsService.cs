@@ -36,6 +36,9 @@ public sealed class AppSettingsService
     /// <summary>默认自动播放下一项。</summary>
     public const bool DefaultAutoAdvance = true;
 
+    /// <summary>默认记录最近播放；关闭后删除历史记录文件。</summary>
+    public const bool DefaultRecordRecentPlayback = true;
+
     private readonly string _settingsFilePath;
 
     public AppSettingsService()
@@ -56,6 +59,7 @@ public sealed class AppSettingsService
             Language = DefaultLanguage;
             AutoAdvance = DefaultAutoAdvance;
             MultiInstance = DefaultMultiInstance;
+            RecordRecentPlayback = DefaultRecordRecentPlayback;
         }
 
     }
@@ -89,6 +93,9 @@ public sealed class AppSettingsService
 
     /// <summary>播放结束后是否自动播放下一项。</summary>
     public bool AutoAdvance { get; private set; } = DefaultAutoAdvance;
+
+    /// <summary>是否记录最近播放；关闭后不再写入并删除已有记录文件。</summary>
+    public bool RecordRecentPlayback { get; private set; } = DefaultRecordRecentPlayback;
 
     /// <summary>任何设置发生变化时触发；事件在 UI 线程触发。</summary>
     public event EventHandler? Changed;
@@ -152,6 +159,23 @@ public sealed class AppSettingsService
 
         MultiInstance = multiInstance;
         SaveAndNotify();
+    }
+
+    /// <summary>更新是否记录最近播放。</summary>
+    public void SetRecordRecentPlayback(bool recordRecentPlayback)
+    {
+        if (RecordRecentPlayback == recordRecentPlayback)
+        {
+            return;
+        }
+
+        RecordRecentPlayback = recordRecentPlayback;
+        var saved = TrySave();
+        // 即使设置写盘失败，也要让资料库立即清理隐私记录；写盘成功时同样只通知一次。
+        if (saved || !recordRecentPlayback)
+        {
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     /// <summary>更新主题标识。</summary>
@@ -260,6 +284,7 @@ public sealed class AppSettingsService
             IsMuted = document.IsMuted;
             AutoAdvance = document.AutoAdvance;
             MultiInstance = document.MultiInstance;
+            RecordRecentPlayback = document.RecordRecentPlayback;
             return true;
         }
         catch (Exception exception) when (
@@ -285,6 +310,7 @@ public sealed class AppSettingsService
                 IsMuted = IsMuted,
                 AutoAdvance = AutoAdvance,
                 MultiInstance = MultiInstance,
+                RecordRecentPlayback = RecordRecentPlayback,
             };
             var json = JsonSerializer.Serialize(document, AppSettingsJsonContext.Default.AppSettingsDocument);
             var temporaryPath = _settingsFilePath + ".tmp";
@@ -371,6 +397,8 @@ internal sealed class AppSettingsDocument
     public bool AutoAdvance { get; set; } = AppSettingsService.DefaultAutoAdvance;
 
     public bool MultiInstance { get; set; } = AppSettingsService.DefaultMultiInstance;
+
+    public bool RecordRecentPlayback { get; set; } = AppSettingsService.DefaultRecordRecentPlayback;
 }
 
 /// <summary>NativeAOT 友好的设置 JSON 序列化上下文。</summary>

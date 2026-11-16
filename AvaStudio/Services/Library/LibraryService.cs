@@ -49,6 +49,7 @@ public sealed class LibraryService
         _reader = new MediaMetadataReader(artworkStore, videoThumbnailProvider);
         _cacheFilePath = Path.Combine(settings.SettingsDirectory, CacheFileName);
         _recentFilePath = Path.Combine(settings.SettingsDirectory, RecentFileName);
+        _settings.Changed += OnSettingsChanged;
     }
 
     /// <summary>当前资料库快照；始终非 null。</summary>
@@ -87,16 +88,22 @@ public sealed class LibraryService
             () =>
             {
                 cachedItems = LoadCache();
-                recentItems = LoadRecent();
+                recentItems = _settings.RecordRecentPlayback ? LoadRecent() : null;
+                if (!_settings.RecordRecentPlayback)
+                {
+                    DeleteRecentFile();
+                }
             },
             cancellationToken).ConfigureAwait(true);
 
         _items = _settings.MusicFolders.Count + _settings.VideoFolders.Count == 0
             ? []
             : cachedItems ?? [];
-        _recentItems = (recentItems ?? [])
-            .Where(static item => File.Exists(item.Path))
-            .ToList();
+        _recentItems = _settings.RecordRecentPlayback
+            ? (recentItems ?? [])
+                .Where(static item => File.Exists(item.Path))
+                .ToList()
+            : [];
         RebuildSnapshot();
         Changed?.Invoke(this, EventArgs.Empty);
         RecentChanged?.Invoke(this, EventArgs.Empty);
@@ -160,7 +167,13 @@ public sealed class LibraryService
                             token.ThrowIfCancellationRequested();
                             var scanned = scannedFiles[index];
                             var previous = cachedByPath.GetValueOrDefault(scanned.Path);
-                            if (previous is not null && IsUnchanged(previous, scanned))
+                            // 旧版本的视频条目可能没有缩略图；即使文件未变化也要补一次，
+                            // 否则 Linux 新实现的取帧缩略图永远不会写入已有缓存。
+                            var needsArtworkBackfill = previous is not null
+                                && scanned.Kind == MediaItemKind.Video
+                                && (string.IsNullOrWhiteSpace(previous.ArtworkPath)
+                                    || !File.Exists(previous.ArtworkPath));
+                            if (previous is not null && !needsArtworkBackfill && IsUnchanged(previous, scanned))
                             {
                                 results[index] = previous with { Kind = scanned.Kind };
                                 Interlocked.Increment(ref reusedCount);
@@ -258,6 +271,12 @@ public sealed class LibraryService
     {
         ArgumentNullException.ThrowIfNull(item);
 
+        // 关闭“记录最近播放”后不保留任何播放历史。
+        if (!_settings.RecordRecentPlayback)
+        {
+            return;
+        }
+
         var played = item.WithLastPlayed(DateTimeOffset.UtcNow);
         _recentItems.RemoveAll(existing =>
             string.Equals(existing.Path, played.Path, StringComparison.OrdinalIgnoreCase));
@@ -272,11 +291,11 @@ public sealed class LibraryService
         RecentChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>清空最近播放记录。</summary>
+    /// <summary>清空最近播放记录并删除记录文件。</summary>
     public void ClearRecent()
     {
         _recentItems.Clear();
-        SaveRecent();
+        DeleteRecentFile();
         RecentChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -597,9 +616,15 @@ public sealed class LibraryService
         }
     }
 
-    /// <summary>原子写入最近播放记录。</summary>
+    /// <summary>原子写入最近播放记录；关闭记录功能时改为删除文件。</summary>
     private void SaveRecent()
     {
+        if (!_settings.RecordRecentPlayback)
+        {
+            DeleteRecentFile();
+            return;
+        }
+
         try
         {
             Directory.CreateDirectory(_settings.SettingsDirectory);
@@ -611,6 +636,40 @@ public sealed class LibraryService
         {
             // 最近播放记录不是关键数据，写入失败时保持内存状态。
         }
+    }
+
+    /// <summary>删除最近播放记录文件；文件不存在或无法删除时保持静默。</summary>
+    private void DeleteRecentFile()
+    {
+        try
+        {
+            if (File.Exists(_recentFilePath))
+            {
+                File.Delete(_recentFilePath);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // 隐私开关已经生效；删除失败时不能让它阻断资料库操作。
+        }
+    }
+
+    /// <summary>设置变化时立即响应“关闭最近播放记录”，清空内存并删除文件。</summary>
+    private void OnSettingsChanged(object? sender, EventArgs e)
+    {
+        if (_settings.RecordRecentPlayback)
+        {
+            return;
+        }
+
+        if (_recentItems.Count == 0 && !File.Exists(_recentFilePath))
+        {
+            return;
+        }
+
+        _recentItems.Clear();
+        DeleteRecentFile();
+        RecentChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>临时文件 + 原子替换，避免进程中断留下半写 JSON。</summary>
