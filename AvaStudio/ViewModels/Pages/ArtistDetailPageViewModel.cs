@@ -71,8 +71,10 @@ public sealed partial class ArtistDetailPageViewModel : PageViewModelBase
     public string SummaryText =>
         $"{Artist.AlbumCount} 张专辑 · {Artist.Count} 首歌曲 · {DurationFormatter.FormatLong(Artist.TotalDuration)}";
 
-    /// <summary>是否有专辑。</summary>
-    public bool HasAlbums => Albums.Count > 0;
+    /// <summary>
+    /// 单专辑艺术家不再重复显示专辑行；多专辑时才保留专辑列表入口。
+    /// </summary>
+    public bool ShowAlbums => Albums.Count > 1;
 
     /// <summary>头像。</summary>
     [ObservableProperty]

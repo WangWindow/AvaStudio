@@ -82,7 +82,7 @@
 
     </Grid>
 
-    <!-- 工具行：随机播放、排序/流派筛选与当前分区计数。 -->
+    <!-- 工具行：随机播放、排序与当前分区计数。 -->
     <Grid Grid.Row="1" Margin="40,14,40,0" ColumnDefinitions="Auto,*,Auto">
       <Button Classes="toolbar"
         Command="{Binding RandomPlayCommand}"
@@ -102,29 +102,21 @@
         <TextBlock Classes="tertiary" Text="{Binding ArtistCountText}" IsVisible="{Binding IsArtistsSelected}" VerticalAlignment="Center" />
 
         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" IsVisible="{Binding IsSongsSelected}">
-          <fi:SymbolIcon Symbol="ArrowSort"
-            FontSize="14"
-            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-            VerticalAlignment="Center" />
+          <Button Classes="icon-tool"
+            Width="28"
+            Height="28"
+            Command="{Binding ToggleSortDirectionCommand}"
+            AutomationProperties.Name="{Binding SortDirectionTip}"
+            ToolTip.Tip="{Binding SortDirectionTip}">
+            <fi:SymbolIcon Symbol="{Binding SortSymbol}" FontSize="14" />
+          </Button>
           <TextBlock Classes="tertiary" Text="排序" VerticalAlignment="Center" />
           <ComboBox Classes="toolbar-select"
-            MinWidth="112"
+            MinWidth="104"
             ItemsSource="{Binding SortOptions}"
             SelectedIndex="{Binding SelectedSortIndex, Mode=TwoWay}"
             AutomationProperties.Name="排序方式"
             ToolTip.Tip="按标题、艺术家或专辑排序" />
-          <fi:SymbolIcon Symbol="Filter"
-            FontSize="13"
-            Margin="6,0,0,0"
-            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-            VerticalAlignment="Center" />
-          <TextBlock Classes="tertiary" Text="流派" VerticalAlignment="Center" />
-          <ComboBox Classes="toolbar-select"
-            MinWidth="128"
-            ItemsSource="{Binding Genres}"
-            SelectedItem="{Binding SelectedGenre, Mode=TwoWay}"
-            AutomationProperties.Name="流派筛选"
-            ToolTip.Tip="按流派筛选歌曲" />
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center" IsVisible="{Binding !IsSongsSelected}">
@@ -144,11 +136,12 @@
     <!-- 歌曲分区：直接以字母分组开始，行交替底色；保持虚拟化。 -->
     <Grid Grid.Row="2" IsVisible="{Binding IsSongsSelected}">
       <ScrollViewer IsVisible="{Binding HasSongs}"
-        Margin="40,12,40,32"
         VerticalScrollBarVisibility="Auto"
         HorizontalScrollBarVisibility="Disabled">
+        <!-- 与视频页一致：滚动条贴住右侧，40 DIP 内容留白放在列表内部。 -->
         <!-- 扁平化表头/歌曲行，交给 VirtualizingStackPanel 只创建视口内的行。 -->
         <ItemsControl ItemsSource="{Binding SongEntries}"
+          Margin="40,12,40,32"
           HorizontalAlignment="Stretch"
           ItemContainerTheme="{StaticResource LibraryRowContainer}">
           <ItemsControl.ItemsPanel>

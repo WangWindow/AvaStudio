@@ -59,7 +59,8 @@
     <Grid Grid.Row="0" Margin="40,24,40,0" RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
       <StackPanel Orientation="Horizontal" Spacing="24" VerticalAlignment="Center">
         <TextBlock Classes="page-title" Text="视频" />
-        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" Margin="0,4,0,0">
+        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center"
+          Margin="0,4,0,0">
           <Button Classes="page-tab"
             Classes.active="{Binding IsFoldersSelected}"
             Command="{Binding SelectFoldersCommand}"
@@ -103,7 +104,8 @@
 
     <!-- 工具行：当前目录名；位于子文件夹时显示返回；右侧为计数与位置摘要。 -->
     <Grid Grid.Row="1" Margin="40,14,40,0" ColumnDefinitions="Auto,*,Auto" MinHeight="32">
-      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding IsFolderListVisible}">
+      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"
+        IsVisible="{Binding IsFolderListVisible}">
         <Button Classes="toolbar"
           IsVisible="{Binding IsFolderOpen}"
           Command="{Binding BackToFoldersCommand}"
@@ -128,19 +130,28 @@
       </StackPanel>
 
       <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-        <TextBlock Classes="tertiary" Text="{Binding FolderCountText}" IsVisible="{Binding IsFolderListVisible}" VerticalAlignment="Center" />
-        <TextBlock Classes="tertiary" Text="{Binding VideoCountText}" IsVisible="{Binding IsAllVideosSelected}" VerticalAlignment="Center" />
 
-        <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
-          <fi:SymbolIcon Symbol="Library"
-            FontSize="13"
-            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-            VerticalAlignment="Center" />
-          <TextBlock Classes="tertiary"
-            Text="{Binding LocationSummary}"
-            MaxWidth="280"
-            TextTrimming="CharacterEllipsis"
-            VerticalAlignment="Center" />
+        <TextBlock Classes="tertiary" Text="{Binding FolderCountText}"
+          IsVisible="{Binding IsFolderListVisible}" VerticalAlignment="Center" />
+        <TextBlock Classes="tertiary" Text="{Binding VideoCountText}"
+          IsVisible="{Binding IsAllVideosSelected}" VerticalAlignment="Center" />
+
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <Button Classes="icon-tool"
+            Width="28"
+            Height="28"
+            Command="{Binding ToggleSortDirectionCommand}"
+            AutomationProperties.Name="{Binding SortDirectionTip}"
+            ToolTip.Tip="{Binding SortDirectionTip}">
+            <fi:SymbolIcon Symbol="{Binding SortSymbol}" FontSize="14" />
+          </Button>
+          <TextBlock Classes="tertiary" Text="排序" VerticalAlignment="Center" />
+          <ComboBox Classes="toolbar-select"
+            MinWidth="104"
+            ItemsSource="{Binding SortOptions}"
+            SelectedIndex="{Binding SelectedSortIndex, Mode=TwoWay}"
+            AutomationProperties.Name="视频排序方式"
+            ToolTip.Tip="按名称或文件时间排序" />
         </StackPanel>
       </StackPanel>
     </Grid>
@@ -237,4 +248,3 @@
       ShowSecondary="False" />
   </Grid>
 </UserControl>
-

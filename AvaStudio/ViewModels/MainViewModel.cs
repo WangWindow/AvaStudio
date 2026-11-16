@@ -139,6 +139,9 @@ public sealed partial class MainViewModel : ViewModelBase
     /// <summary>设置页是否被选中。</summary>
     public bool IsSettingsSelected => ReferenceEquals(SelectedPage, _settingsPage);
 
+    /// <summary>迷你播放条是否显示；设置页不保留常驻播放条。</summary>
+    public bool IsPlayerBarVisible => !IsSettingsSelected;
+
     /// <summary>资料库统计文本，供状态栏/主页显示。</summary>
     public string LibrarySummary
     {
@@ -153,6 +156,7 @@ public sealed partial class MainViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(WindowTitle));
         OnPropertyChanged(nameof(IsSettingsSelected));
+        OnPropertyChanged(nameof(IsPlayerBarVisible));
 
         // 视频表面只在播放页展开；退出播放页后允许迷你播放条继续，不再因换页停止播放。
     }
@@ -458,6 +462,17 @@ public sealed partial class MainViewModel : ViewModelBase
         }
 
         IsImmersiveOpen = !IsImmersiveOpen;
+    }
+
+    /// <summary>进入独立播放页；没有媒体时忽略，已进入时保持不变。</summary>
+    public void EnterImmersive()
+    {
+        if (!PlayerBar.HasMedia)
+        {
+            return;
+        }
+
+        IsImmersiveOpen = true;
     }
 
     /// <summary>关闭沉浸播放。</summary>

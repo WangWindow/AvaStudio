@@ -9,13 +9,16 @@ using AvaStudio.ViewModels;
 namespace AvaStudio.Views;
 
 /// <summary>
-/// 独立播放页的底部控制条，和标题栏、视频表面同属主窗口。
+/// 独立播放页的底部控制条，覆盖在视频/封面之上。
 /// 进度滑杆与其它播放器共用同一套拖动规则：拖动冻结回写，松开只提交一次定位。
 /// </summary>
 public partial class VideoStageControlsView : UserControl
 {
     private bool _isSeeking;
     private PlayerBarViewModel? _viewModel;
+
+    /// <summary>是否正在拖动进度；供自动隐藏逻辑在拖动期间保持控制条可见。</summary>
+    public bool IsSeeking => _isSeeking;
 
     public VideoStageControlsView()
     {

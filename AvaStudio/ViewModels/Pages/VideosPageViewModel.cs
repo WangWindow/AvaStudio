@@ -30,6 +30,7 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
     private readonly AppServices _services;
     private readonly Action<string> _reportStatus;
     private VideoDirectoryNode? _currentFolder;
+    private bool _isUpdatingSortDirection;
 
     public VideosPageViewModel(AppServices services, Action<string> reportStatus)
         : base("视频", Symbol.Video)
@@ -53,6 +54,23 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
     /// <summary>当前分区。</summary>
     [ObservableProperty]
     public partial VideoSection SelectedSection { get; set; } = VideoSection.Folders;
+
+    /// <summary>视频排序选项。</summary>
+    public IReadOnlyList<string> SortOptions { get; } = ["名称", "时间"];
+
+    /// <summary>当前排序索引：0 名称，1 文件时间（最新优先）。</summary>
+    [ObservableProperty]
+    public partial int SelectedSortIndex { get; set; }
+
+    /// <summary>是否降序；名称默认升序，时间默认降序。</summary>
+    [ObservableProperty]
+    public partial bool IsSortDescending { get; set; }
+
+    /// <summary>排序方向图标：单箭头突出当前升/降序。</summary>
+    public Symbol SortSymbol => IsSortDescending ? Symbol.ArrowSortDown : Symbol.ArrowSortUp;
+
+    /// <summary>排序方向提示。</summary>
+    public string SortDirectionTip => IsSortDescending ? "当前降序，点击切换为升序" : "当前升序，点击切换为降序";
 
     /// <summary>当前文件夹路径；null 表示没有可浏览的资料库根目录。</summary>
     [ObservableProperty]
@@ -81,11 +99,6 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
 
     /// <summary>是否有资料库位置。</summary>
     public bool HasLibraryLocations => VideoLocationCount > 0;
-
-    /// <summary>资料库位置摘要。</summary>
-    public string LocationSummary => VideoLocationCount == 0
-        ? "尚未添加视频文件夹"
-        : $"已指定 {VideoLocationCount} 个资料库位置";
 
     /// <summary>当前文件夹是否有子文件夹。</summary>
     public bool HasFolders => Folders.Count > 0;
@@ -138,6 +151,30 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
     {
         RaiseViewProperties();
     }
+
+    partial void OnSelectedSortIndexChanged(int value)
+    {
+        // 名称默认升序，时间默认最新优先；切换排序方式时恢复该方式的默认方向。
+        _isUpdatingSortDirection = true;
+        IsSortDescending = value == 1;
+        _isUpdatingSortDirection = false;
+        Rebuild();
+    }
+
+    partial void OnIsSortDescendingChanged(bool value)
+    {
+        if (!_isUpdatingSortDirection)
+        {
+            Rebuild();
+        }
+
+        OnPropertyChanged(nameof(SortSymbol));
+        OnPropertyChanged(nameof(SortDirectionTip));
+    }
+
+    /// <summary>切换升序/降序。</summary>
+    [RelayCommand]
+    private void ToggleSortDirection() => IsSortDescending = !IsSortDescending;
 
     partial void OnOpenedFolderPathChanged(string? value)
     {
@@ -226,9 +263,10 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
         var snapshot = _services.Library.Snapshot;
 
         AllVideos.Clear();
-        foreach (var item in snapshot.VideoItems)
+        var allVideoItems = SortVideoItems(snapshot.VideoItems).ToArray();
+        foreach (var item in allVideoItems)
         {
-            AllVideos.Add(CreateVideoViewModel(item, snapshot.VideoItems));
+            AllVideos.Add(CreateVideoViewModel(item, allVideoItems));
         }
 
         var current = OpenedFolderPath is not null
@@ -260,9 +298,10 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
                 Folders.Add(new VideoFolderItemViewModel(child, OpenFolder));
             }
 
-            foreach (var item in folder.Videos)
+            var folderVideoItems = SortVideoItems(folder.Videos).ToArray();
+            foreach (var item in folderVideoItems)
             {
-                FolderVideos.Add(CreateVideoViewModel(item, folder.Videos));
+                FolderVideos.Add(CreateVideoViewModel(item, folderVideoItems));
             }
         }
 
@@ -275,6 +314,22 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
     /// <summary>判断路径是否为资料库视频根目录。</summary>
     private bool IsLibraryRoot(string path) => _services.Library.Snapshot.VideoRoots
         .Any(root => string.Equals(root.Path, path, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// 按当前排序选项排列视频：名称使用拼音排序键；时间按文件修改时间最新优先，
+    /// 修改时间相同时用名称兜底，保证结果稳定。
+    /// </summary>
+    private IEnumerable<MediaItem> SortVideoItems(IEnumerable<MediaItem> items) =>
+        SelectedSortIndex == 1
+            ? (IsSortDescending
+                    ? items.OrderByDescending(static item => item.FileModifiedTicks)
+                    : items.OrderBy(static item => item.FileModifiedTicks))
+                .ThenBy(static item => LibraryTextSort.GetSortKey(item.DisplayTitle), StringComparer.OrdinalIgnoreCase)
+                .ThenBy(static item => item.DisplayTitle, StringComparer.CurrentCultureIgnoreCase)
+            : (IsSortDescending
+                    ? items.OrderByDescending(static item => LibraryTextSort.GetSortKey(item.DisplayTitle), StringComparer.OrdinalIgnoreCase)
+                    : items.OrderBy(static item => LibraryTextSort.GetSortKey(item.DisplayTitle), StringComparer.OrdinalIgnoreCase))
+                .ThenBy(static item => item.DisplayTitle, StringComparer.CurrentCultureIgnoreCase);
 
     /// <summary>在目录树中查找路径对应节点。</summary>
     private static VideoDirectoryNode? FindNode(IReadOnlyList<VideoDirectoryNode> roots, string path)
@@ -329,7 +384,6 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
         OnPropertyChanged(nameof(FolderHeading));
         OnPropertyChanged(nameof(VideoLocationCount));
         OnPropertyChanged(nameof(HasLibraryLocations));
-        OnPropertyChanged(nameof(LocationSummary));
     }
 
     private void OnLibraryChanged(object? sender, EventArgs e)
@@ -341,6 +395,5 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
     {
         OnPropertyChanged(nameof(VideoLocationCount));
         OnPropertyChanged(nameof(HasLibraryLocations));
-        OnPropertyChanged(nameof(LocationSummary));
     }
 }

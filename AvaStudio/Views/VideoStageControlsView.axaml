@@ -10,20 +10,13 @@
   x:CompileBindings="True"
   Focusable="False">
 
-  <UserControl.Resources>
-    <!-- 独立播放页底部控制条：顶部透明，向下逐渐压暗，控制按钮不依赖卡片底板。 -->
-    <LinearGradientBrush x:Key="VideoStageScrimBrush" StartPoint="0%,0%" EndPoint="0%,100%">
-      <GradientStop Offset="0" Color="#00000000" />
-      <GradientStop Offset="0.45" Color="#66000000" />
-      <GradientStop Offset="1" Color="#E6000000" />
-    </LinearGradientBrush>
-  </UserControl.Resources>
-
   <UserControl.Styles>
     <StyleInclude Source="avares://AvaStudio/Styles/PlayerStyles.axaml" />
   </UserControl.Styles>
 
-  <Border Background="{StaticResource VideoStageScrimBrush}">
+  <!-- 独立播放页控制条直接覆盖在视频/封面上，背景透明；
+       深色作用域让图标、时间和滑杆在明亮画面上仍然清晰。 -->
+  <ThemeVariantScope RequestedThemeVariant="Dark">
     <Grid Margin="48,22,48,24"
       RowDefinitions="Auto,Auto"
       RowSpacing="6">
@@ -151,5 +144,5 @@
         </StackPanel>
       </Grid>
     </Grid>
-  </Border>
+  </ThemeVariantScope>
 </UserControl>

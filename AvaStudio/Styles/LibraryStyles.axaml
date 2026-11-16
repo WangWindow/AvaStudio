@@ -48,14 +48,14 @@
     <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
   </Style>
 
-  <!-- 行按钮：歌曲/曲目列表，48–56 高，整行可点击。 -->
+  <!-- 行按钮：歌曲/曲目列表，46 高，整行可点击；比旧版更紧凑，文字仍垂直居中。 -->
   <Style Selector="Button.library-row">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="4" />
-    <Setter Property="Padding" Value="7,0" />
-    <Setter Property="Height" Value="52" />
+    <Setter Property="Padding" Value="8,0" />
+    <Setter Property="Height" Value="46" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="VerticalContentAlignment" Value="Center" />

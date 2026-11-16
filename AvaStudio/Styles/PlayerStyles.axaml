@@ -1,8 +1,9 @@
 <Styles xmlns="https://github.com/avaloniaui"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-  <!-- 播放条是内容区底部的深色 Fluent 卡片：颜色只取 Fluent 资源，
-       不使用品牌渐变或大色块。深色由 PlayerBarView 的 ThemeVariantScope 提供。 -->
+  <!-- 播放条是内容区底部的 Fluent 卡片：颜色只取 Fluent 资源，
+       不使用品牌渐变或大色块，并跟随当前浅色/深色主题。
+       沉浸播放页的控制条在 VideoStageControlsView 内单独使用深色作用域。 -->
   <Style Selector="Border.player-card">
     <Setter Property="Height" Value="126" />
     <Setter Property="Padding" Value="16" />

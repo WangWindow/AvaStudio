@@ -9,7 +9,7 @@
   x:DataType="vm:PlayerBarViewModel"
   x:CompileBindings="True">
 
-  <!-- 音频独立播放页：只画封面/标题；退出与播放控制由共享标题栏和底部 Popup 提供。 -->
+  <!-- 音频独立播放页：只画封面/标题；退出与播放控制由标题栏和覆盖控制条提供。 -->
   <ThemeVariantScope RequestedThemeVariant="Dark">
     <Border Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}">
       <Viewbox Margin="48,28,48,148"

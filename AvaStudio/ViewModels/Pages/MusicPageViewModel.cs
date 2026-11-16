@@ -28,13 +28,11 @@ public enum MusicSection
 public sealed partial class MusicPageViewModel : PageViewModelBase
 {
     private readonly AppServices _services;
-    private const string AllGenres = "全部流派";
 
     private readonly Action<string> _reportStatus;
     private readonly Action<AlbumGroup> _openAlbum;
     private readonly Action<ArtistGroup> _openArtist;
     private readonly List<MediaItemViewModel> _allSongs = [];
-    private bool _isRefreshingSongView;
 
     public MusicPageViewModel(
         AppServices services,
@@ -52,14 +50,11 @@ public sealed partial class MusicPageViewModel : PageViewModelBase
         Rebuild();
     }
 
-    /// <summary>按当前流派/排序筛选后的歌曲。</summary>
+    /// <summary>按当前排序筛选后的歌曲。</summary>
     public ObservableCollection<MediaItemViewModel> Songs { get; } = [];
 
     /// <summary>扁平化的歌曲行与字母表头；供虚拟化列表按视口创建。</summary>
     public ObservableCollection<SongListEntry> SongEntries { get; } = [];
-
-    /// <summary>当前资料库中的流派选项。</summary>
-    public ObservableCollection<string> Genres { get; } = [];
 
     /// <summary>排序选项显示文本。</summary>
     public IReadOnlyList<string> SortOptions { get; } = ["标题", "艺术家", "专辑"];
@@ -80,13 +75,19 @@ public sealed partial class MusicPageViewModel : PageViewModelBase
     [ObservableProperty]
     public partial MusicSection SelectedSection { get; set; } = MusicSection.Songs;
 
-    /// <summary>当前流派筛选；默认显示全部。</summary>
-    [ObservableProperty]
-    public partial string SelectedGenre { get; set; } = AllGenres;
-
     /// <summary>当前排序索引：0 标题、1 艺术家、2 专辑。</summary>
     [ObservableProperty]
     public partial int SelectedSortIndex { get; set; }
+
+    /// <summary>是否降序；默认升序。</summary>
+    [ObservableProperty]
+    public partial bool IsSortDescending { get; set; }
+
+    /// <summary>排序方向图标：单箭头突出当前升/降序。</summary>
+    public Symbol SortSymbol => IsSortDescending ? Symbol.ArrowSortDown : Symbol.ArrowSortUp;
+
+    /// <summary>排序方向提示。</summary>
+    public string SortDirectionTip => IsSortDescending ? "当前降序，点击切换为升序" : "当前升序，点击切换为降序";
 
     /// <summary>是否选中歌曲分区。</summary>
     public bool IsSongsSelected => SelectedSection == MusicSection.Songs;
@@ -171,21 +172,21 @@ public sealed partial class MusicPageViewModel : PageViewModelBase
         RaiseSectionProperties();
     }
 
-    partial void OnSelectedGenreChanged(string value)
-    {
-        if (!_isRefreshingSongView)
-        {
-            ApplySongView();
-        }
-    }
-
     partial void OnSelectedSortIndexChanged(int value)
     {
-        if (!_isRefreshingSongView)
-        {
-            ApplySongView();
-        }
+        ApplySongView();
     }
+
+    partial void OnIsSortDescendingChanged(bool value)
+    {
+        ApplySongView();
+        OnPropertyChanged(nameof(SortSymbol));
+        OnPropertyChanged(nameof(SortDirectionTip));
+    }
+
+    /// <summary>切换歌曲排序的升序/降序。</summary>
+    [RelayCommand]
+    private void ToggleSortDirection() => IsSortDescending = !IsSortDescending;
 
     /// <summary>切换到歌曲分区。</summary>
     [RelayCommand]
@@ -274,31 +275,6 @@ public sealed partial class MusicPageViewModel : PageViewModelBase
                 song => _ = PlaySongAsync(song)));
         }
 
-        _isRefreshingSongView = true;
-        try
-        {
-            var genres = snapshot.MusicItems
-                .Select(static item => item.DisplayGenre)
-                .Distinct(StringComparer.CurrentCultureIgnoreCase)
-                .OrderBy(static genre => genre, StringComparer.CurrentCultureIgnoreCase)
-                .ToArray();
-            Genres.Clear();
-            Genres.Add(AllGenres);
-            foreach (var genre in genres)
-            {
-                Genres.Add(genre);
-            }
-
-            if (!Genres.Contains(SelectedGenre, StringComparer.CurrentCultureIgnoreCase))
-            {
-                SelectedGenre = AllGenres;
-            }
-        }
-        finally
-        {
-            _isRefreshingSongView = false;
-        }
-
         ApplySongView();
 
         Albums.Clear();
@@ -368,26 +344,32 @@ public sealed partial class MusicPageViewModel : PageViewModelBase
         }
     }
 
-    /// <summary>应用流派筛选与排序，并重新生成字母分组。</summary>
+    /// <summary>应用排序并重新生成字母分组。</summary>
     private void ApplySongView()
     {
         IEnumerable<MediaItemViewModel> query = _allSongs;
-        if (!string.Equals(SelectedGenre, AllGenres, StringComparison.CurrentCultureIgnoreCase))
-        {
-            query = query.Where(song =>
-                string.Equals(song.Genre, SelectedGenre, StringComparison.CurrentCultureIgnoreCase));
-        }
 
         query = SelectedSortIndex switch
         {
-            1 => query.OrderBy(static song => LibraryTextSort.GetSortKey(song.Artist), StringComparer.OrdinalIgnoreCase)
-                .ThenBy(static song => song.Artist, StringComparer.CurrentCultureIgnoreCase)
-                .ThenBy(static song => song.Title, StringComparer.CurrentCultureIgnoreCase),
-            2 => query.OrderBy(static song => LibraryTextSort.GetSortKey(song.Album), StringComparer.OrdinalIgnoreCase)
-                .ThenBy(static song => song.Album, StringComparer.CurrentCultureIgnoreCase)
-                .ThenBy(static song => song.Title, StringComparer.CurrentCultureIgnoreCase),
-            _ => query.OrderBy(static song => LibraryTextSort.GetSortKey(song.Title), StringComparer.OrdinalIgnoreCase)
-                .ThenBy(static song => song.Title, StringComparer.CurrentCultureIgnoreCase),
+            1 => IsSortDescending
+                ? query.OrderByDescending(static song => LibraryTextSort.GetSortKey(song.Artist), StringComparer.OrdinalIgnoreCase)
+                    .ThenByDescending(static song => song.Artist, StringComparer.CurrentCultureIgnoreCase)
+                    .ThenByDescending(static song => song.Title, StringComparer.CurrentCultureIgnoreCase)
+                : query.OrderBy(static song => LibraryTextSort.GetSortKey(song.Artist), StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(static song => song.Artist, StringComparer.CurrentCultureIgnoreCase)
+                    .ThenBy(static song => song.Title, StringComparer.CurrentCultureIgnoreCase),
+            2 => IsSortDescending
+                ? query.OrderByDescending(static song => LibraryTextSort.GetSortKey(song.Album), StringComparer.OrdinalIgnoreCase)
+                    .ThenByDescending(static song => song.Album, StringComparer.CurrentCultureIgnoreCase)
+                    .ThenByDescending(static song => song.Title, StringComparer.CurrentCultureIgnoreCase)
+                : query.OrderBy(static song => LibraryTextSort.GetSortKey(song.Album), StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(static song => song.Album, StringComparer.CurrentCultureIgnoreCase)
+                    .ThenBy(static song => song.Title, StringComparer.CurrentCultureIgnoreCase),
+            _ => IsSortDescending
+                ? query.OrderByDescending(static song => LibraryTextSort.GetSortKey(song.Title), StringComparer.OrdinalIgnoreCase)
+                    .ThenByDescending(static song => song.Title, StringComparer.CurrentCultureIgnoreCase)
+                : query.OrderBy(static song => LibraryTextSort.GetSortKey(song.Title), StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(static song => song.Title, StringComparer.CurrentCultureIgnoreCase),
         };
 
         Songs.Clear();

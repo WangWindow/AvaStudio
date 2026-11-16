@@ -51,6 +51,10 @@ public sealed partial class SettingsPageViewModel : PageViewModelBase
     [ObservableProperty]
     public partial bool MultiInstance { get; set; }
 
+    /// <summary>是否记录最近播放；关闭后删除已有记录文件。</summary>
+    [ObservableProperty]
+    public partial bool RecordRecentPlayback { get; set; }
+
     /// <summary>应用版本号。</summary>
     public string AppVersion => typeof(SettingsPageViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
 
@@ -172,6 +176,11 @@ public sealed partial class SettingsPageViewModel : PageViewModelBase
         _services.Settings.SetMultiInstance(value);
     }
 
+    partial void OnRecordRecentPlaybackChanged(bool value)
+    {
+        _services.Settings.SetRecordRecentPlayback(value);
+    }
+
     /// <summary>把设置文件中的值同步到界面属性，避免外部修改后控件显示旧值。</summary>
     private void SyncSettingValues()
     {
@@ -183,6 +192,11 @@ public sealed partial class SettingsPageViewModel : PageViewModelBase
         if (MultiInstance != _services.Settings.MultiInstance)
         {
             MultiInstance = _services.Settings.MultiInstance;
+        }
+
+        if (RecordRecentPlayback != _services.Settings.RecordRecentPlayback)
+        {
+            RecordRecentPlayback = _services.Settings.RecordRecentPlayback;
         }
 
         var themeIndex = _services.Settings.Theme switch

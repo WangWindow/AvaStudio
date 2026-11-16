@@ -27,7 +27,9 @@ public sealed partial class PlayerBarViewModel : ViewModelBase
     /// <summary>请求切换沉浸播放器；由根 ViewModel 处理窗口/布局状态。</summary>
     public event EventHandler? ImmersiveToggleRequested;
 
-    /// <summary>请求切换独立播放页的系统全屏；由 MainView 处理窗口状态。</summary>
+    /// <summary>
+    /// 请求独立播放页的系统全屏；未进入播放页时由 MainView 先打开播放页。
+    /// </summary>
     public event EventHandler? FullscreenToggleRequested;
 
     public PlayerBarViewModel(AppServices services)
@@ -175,7 +177,7 @@ public sealed partial class PlayerBarViewModel : ViewModelBase
     [RelayCommand]
     private void ToggleImmersive() => ImmersiveToggleRequested?.Invoke(this, EventArgs.Empty);
 
-    /// <summary>请求切换独立播放页的系统全屏。</summary>
+    /// <summary>请求切换独立播放页的系统全屏；迷你播放条会先由 MainView 打开播放页。</summary>
     [RelayCommand]
     private void ToggleFullscreen() => FullscreenToggleRequested?.Invoke(this, EventArgs.Empty);
 

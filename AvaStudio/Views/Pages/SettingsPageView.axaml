@@ -26,8 +26,9 @@
     <ScrollViewer Grid.Row="1"
       VerticalScrollBarVisibility="Auto"
       HorizontalScrollBarVisibility="Disabled">
+      <!-- 设置页不显示迷你播放条，底部留白与其它资料库页保持一致。 -->
       <StackPanel x:Name="SettingsContent"
-        Margin="40,24,40,48"
+        Margin="40,24,40,32"
         Spacing="0">
 
         <!-- 库 -->
@@ -290,6 +291,32 @@
           <Border Classes="settings-row">
             <Grid ColumnDefinitions="Auto,*,Auto" Margin="20,0" MinHeight="80">
               <Border Classes="settings-icon">
+                <fi:SymbolIcon Symbol="Delete"
+                  FontSize="20"
+                  Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center" />
+              </Border>
+
+              <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center" Spacing="3">
+                <TextBlock Classes="settings-row-title" Text="记录最近播放" />
+                <TextBlock Classes="settings-row-description"
+                  Text="关闭后不再保存播放历史，并立即删除已保存的最近播放记录文件。" />
+              </StackPanel>
+
+              <ToggleSwitch Grid.Column="2"
+                IsChecked="{Binding RecordRecentPlayback, Mode=TwoWay}"
+                OnContent="开"
+                OffContent="关"
+                VerticalAlignment="Center"
+                AutomationProperties.Name="记录最近播放"
+                ToolTip.Tip="关闭后删除最近播放记录文件" />
+            </Grid>
+          </Border>
+
+          <Border Classes="settings-row">
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="20,0" MinHeight="80">
+              <Border Classes="settings-icon">
                 <fi:SymbolIcon Symbol="Copy"
                   FontSize="20"
                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
@@ -402,7 +429,7 @@
 
               <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center" Spacing="3">
                 <TextBlock Classes="settings-row-title" Text="应用数据" />
-                <TextBlock Classes="settings-row-description" Text="资料库位置、播放列表与播放记录保存在本机。" />
+                <TextBlock Classes="settings-row-description" Text="资料库位置与播放列表保存在本机。" />
                 <TextBlock Text="{Binding SettingsDirectory}"
                   FontSize="11.5"
                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"

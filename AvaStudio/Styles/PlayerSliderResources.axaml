@@ -1,10 +1,8 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-  <!-- 播放条与沉浸页共用同一套滑杆外观。两个使用场景都包在深色 ThemeVariantScope 里，
-       所以非活动轨直接使用固定的 35% 白，避免浅色主题刷子在深色表面上“消失”。 -->
-  <SolidColorBrush x:Key="PlayerSliderTrackBrush" Color="#59FFFFFF" />
-  <SolidColorBrush x:Key="PlayerSliderThumbBrush" Color="#FFFFFFFF" />
+  <!-- 播放条与沉浸页共用同一套滑杆外观。轨道和拇指取 Fluent 前景资源，
+       因此迷你播放条跟随浅色/深色主题，沉浸控制条在深色作用域内仍是浅色。 -->
   <SolidColorBrush x:Key="PlayerSliderThumbBorderBrush" Color="#33000000" />
 
   <!-- 轨道按钮自己绘制轴线：高度落在按钮上，即使内容测量为 0 也能看到 4 DIP 细线。
@@ -46,7 +44,7 @@
     <Setter Property="Template">
       <ControlTemplate>
         <Border x:Name="PART_ThumbBall"
-          Background="{StaticResource PlayerSliderThumbBrush}"
+          Background="{DynamicResource SystemControlForegroundBaseHighBrush}"
           BorderBrush="{StaticResource PlayerSliderThumbBorderBrush}"
           BorderThickness="1"
           CornerRadius="8"
@@ -78,10 +76,12 @@
             Background="{DynamicResource SystemControlHighlightAccentBrush}" />
         </Track.DecreaseButton>
 
+        <!-- 非活动轨取中等前景色并降到 35%，在浅色和深色主题下都保持 subtle。 -->
         <Track.IncreaseButton>
           <RepeatButton x:Name="PART_IncreaseButton"
             Theme="{StaticResource PlayerSliderTrackButtonTheme}"
-            Background="{StaticResource PlayerSliderTrackBrush}" />
+            Opacity="0.35"
+            Background="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
         </Track.IncreaseButton>
 
         <Thumb x:Name="PART_Thumb"

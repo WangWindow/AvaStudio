@@ -56,14 +56,16 @@
               VerticalAlignment="Center" />
           </StackPanel>
 
-          <!-- 独立播放页标题栏：音视频共用，只保留退出、媒体图标、片名和窗口按钮。 -->
+          <!-- 独立播放页标题栏：音视频共用，只保留退出、媒体图标、片名和窗口按钮。
+               退出按钮贴住窗口左边缘并铺满标题栏高度，避免左侧留出死区。 -->
           <StackPanel x:Name="PlayerTitleBarLeft"
             Orientation="Horizontal"
             Spacing="8"
-            Margin="12,0,0,0"
+            Margin="0"
             VerticalAlignment="Center"
             IsVisible="{Binding IsImmersiveOpen}">
-            <Button Classes="icon-tool"
+            <Button x:Name="PlayerTitleBarExitButton"
+              Classes="icon-tool immersive-titlebar-exit"
               Command="{Binding PlayerBar.ToggleImmersiveCommand}"
               chrome:WindowDecorationProperties.ElementRole="User"
               AutomationProperties.Name="退出播放页（Esc）"
@@ -167,8 +169,8 @@
         VerticalAlignment="Stretch"
         BorderBrush="{DynamicResource SystemControlBackgroundBaseLowBrush}"
         BorderThickness="0,0,1,0">
-        <Grid RowDefinitions="32,Auto,Auto,*,Auto">
-          <!-- 面板顶部 32 高条：返回按钮始终在侧边栏里；右侧由标题栏的应用名占用。 -->
+        <Grid RowDefinitions="40,Auto,Auto,*,Auto">
+          <!-- 面板顶部 40 高条：返回按钮与下方导航按钮同尺寸（40×40），图标落在同一列。 -->
           <Grid Grid.Row="0" x:Name="PaneTopStrip">
             <Button x:Name="BackButton"
               Classes="icon-tool"
@@ -332,15 +334,24 @@
             VerticalAlignment="Bottom"
             IsHitTestVisible="False" />
 
-          <!-- 音频沉浸层：覆盖内容区但不盖住底部播放条；淡入/缩放由 code-behind 控制。 -->
+          <!-- 音频沉浸层：覆盖内容区；淡入/缩放由 code-behind 控制。 -->
           <Border x:Name="ImmersiveLayer"
             ZIndex="4"
             IsVisible="False"
             Background="Transparent"
             ClipToBounds="True">
-            <views:ImmersivePlayerView DataContext="{Binding PlayerBar}"
-              DoubleTapped="OnImmersiveSurfaceDoubleTapped" />
+            <views:ImmersivePlayerView DataContext="{Binding PlayerBar}" />
           </Border>
+
+          <!-- 独立播放页控制条：直接叠在视频原生表面/音频封面上方，锚定底部并横向铺满。
+               背景保持透明，显隐与命中测试由 code-behind 的自动隐藏逻辑控制。 -->
+          <Grid x:Name="PlayerControlsHost"
+            ZIndex="5"
+            IsVisible="{Binding IsImmersiveOpen}"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Bottom">
+            <views:VideoStageControlsView x:Name="PlayerControlsView" DataContext="{Binding PlayerBar}" />
+          </Grid>
         </Grid>
 
         <Button x:Name="NavigationScrim"
@@ -353,11 +364,6 @@
           IsTabStop="False"
           Click="OnNavigationScrimClick"
           AutomationProperties.Name="关闭导航" />
-      </Grid>
-
-      <!-- 独立播放页的底部控制条：与标题栏、视频/封面同属主窗口，避免 Popup 与原生视频分离。 -->
-      <Grid Grid.Row="2" x:Name="PlayerControlsHost" IsVisible="{Binding IsImmersiveOpen}" ZIndex="2">
-        <views:VideoStageControlsView DataContext="{Binding PlayerBar}" />
       </Grid>
 
       <Grid Grid.Row="2" x:Name="BottomHost">
@@ -400,7 +406,7 @@
             </Grid>
           </Border>
 
-          <views:PlayerBarView DataContext="{Binding PlayerBar}" />
+          <views:PlayerBarView x:Name="MiniPlayerBar" DataContext="{Binding PlayerBar}" />
         </StackPanel>
       </Grid>
     </Grid>

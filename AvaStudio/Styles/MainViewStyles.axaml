@@ -95,12 +95,17 @@
     <Setter Property="Margin" Value="12,0,0,0" />
   </Style>
 
-  <!-- 侧边栏返回按钮：展开/抽屉时距左 12，48 窄栏居中。 -->
+  <!-- 侧边栏返回按钮：与 pane-toggle/导航行同为 40×40 命中区；
+       顶条高度同步为 40，图标与下方导航图标落在同一列。 -->
   <Style Selector="Button#BackButton">
+    <Setter Property="Width" Value="40" />
+    <Setter Property="Height" Value="40" />
+    <Setter Property="CornerRadius" Value="4" />
     <Setter Property="HorizontalAlignment" Value="Left" />
     <Setter Property="Margin" Value="12,0,0,0" />
   </Style>
 
+  <!-- 48 窄栏中返回按钮与 pane-toggle 一起居中。 -->
   <Style Selector="Grid#MainRoot.rail Button#BackButton">
     <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="Margin" Value="0" />
@@ -473,6 +478,17 @@
     </Setter>
   </Style>
 
+  <!-- 独立播放页控制条覆盖在视频/封面上；显隐只过渡 180ms 透明度，避免画布重排。
+       命中测试在淡出结束后才关闭，由 code-behind 配合过渡时长处理。 -->
+  <Style Selector="Grid#PlayerControlsHost">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.18" />
+      </Transitions>
+    </Setter>
+  </Style>
+
   <!-- 独立播放页：隐藏导航和迷你播放条，内容占满；音视频共用同一套标题栏。 -->
   <Style Selector="Grid#MainRoot.immersive Border#NavPanel">
     <Setter Property="IsVisible" Value="False" />
@@ -493,6 +509,15 @@
   <!-- 播放页标题栏用实体表面，窗口仍可拖动、缩放和 Snap。 -->
   <Style Selector="Grid#MainRoot.player-immersive Border#TitleBarStrip">
     <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+  </Style>
+
+  <!-- 播放页退出按钮贴住窗口左上角，48×32 的整块命中区直达边缘且铺满标题栏。 -->
+  <Style Selector="Button.immersive-titlebar-exit">
+    <Setter Property="Width" Value="48" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
   </Style>
 
   <!-- 仅系统全屏时隐藏自绘缩放手柄和标题栏（标题栏由 code-behind 收起）。 -->

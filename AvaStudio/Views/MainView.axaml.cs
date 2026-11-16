@@ -24,24 +24,43 @@ public partial class MainView : UserControl
     private const double CompactThreshold = 701;
     private const string MaximizeGeometry = "M0.5,0.5 L9.5,0.5 L9.5,9.5 L0.5,9.5 Z";
     private const string RestoreGeometry = "M2.5,0.5 L9.5,0.5 L9.5,7.5 M0.5,2.5 L7.5,2.5 L7.5,9.5 L0.5,9.5 Z";
+    private static readonly TimeSpan PlayerControlsHideDelay = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan PlayerControlsFadeDuration = TimeSpan.FromMilliseconds(180);
+    private static readonly TimeSpan ImmersiveClickDelay = TimeSpan.FromMilliseconds(250);
+    private static readonly Cursor HiddenCursor = new(StandardCursorType.None);
 
     private readonly Dictionary<PageViewModelBase, Control> _pageViews = new();
+    private readonly DispatcherTimer _playerControlsTimer;
+    private readonly DispatcherTimer _immersiveClickTimer;
     private string _layoutMode = "expanded";
     private bool _isNavigationOverlayOpen;
     private bool _isPaneCollapsed;
     private bool _prewarmed;
     private int _immersiveLayerToken;
     private bool? _immersiveApplied;
-    private bool _playerFullScreen;
+    private int _playerControlsVisibilityToken;
+    private bool _playerControlsVisible = true;
+    private bool _isPlayerControlsPointerOver;
+    private bool _isPlayerControlsPointerDown;
+    private bool _immersiveClickPending;
     private WindowState _restoreWindowState = WindowState.Normal;
     private MainViewModel? _viewModel;
     private Window? _window;
     private IVideoOutput? _videoOutput;
     private bool? _videoStageApplied;
 
+    /// <summary>独立播放页的系统全屏状态；直接以窗口状态为准，避免额外布尔状态失同步。</summary>
+    private bool IsPlayerFullScreen =>
+        _viewModel?.IsImmersiveOpen == true && _window?.WindowState == WindowState.FullScreen;
+
     public MainView()
     {
         InitializeComponent();
+
+        _playerControlsTimer = new DispatcherTimer { Interval = PlayerControlsHideDelay };
+        _playerControlsTimer.Tick += OnPlayerControlsHideTick;
+        _immersiveClickTimer = new DispatcherTimer { Interval = ImmersiveClickDelay };
+        _immersiveClickTimer.Tick += OnImmersiveClickTick;
 
         DragDrop.SetAllowDrop(this, true);
         AddHandler(DragDrop.DragEnterEvent, OnDragEnter);
@@ -49,6 +68,14 @@ public partial class MainView : UserControl
         AddHandler(DragDrop.DragLeaveEvent, OnDragLeave);
         AddHandler(DragDrop.DropEvent, OnDrop);
         AddHandler(KeyDownEvent, OnMainViewKeyDown, RoutingStrategies.Tunnel);
+        AddHandler(PointerMovedEvent, OnPlayerSurfacePointerMoved, RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(PointerPressedEvent, OnPlayerSurfacePointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(PointerReleasedEvent, OnPlayerSurfacePointerReleased, RoutingStrategies.Tunnel, handledEventsToo: true);
+        ContentHost.AddHandler(
+            PointerPressedEvent,
+            OnImmersiveSurfacePointerPressed,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
 
         DataContextChanged += OnDataContextChanged;
         SizeChanged += OnSizeChanged;
@@ -227,6 +254,8 @@ public partial class MainView : UserControl
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         DetachWindowEvents();
+        _playerControlsTimer.Stop();
+        _immersiveClickTimer.Stop();
         DisposeVideoOutput();
         ResetImmersiveVisuals();
         _window = null;
@@ -244,12 +273,20 @@ public partial class MainView : UserControl
     /// <summary>窗口级 Esc：即使当前没有焦点元素也能退出全屏/播放页。</summary>
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Escape || _viewModel?.IsImmersiveOpen != true)
+        if (_viewModel?.IsImmersiveOpen != true)
         {
             return;
         }
 
-        if (_playerFullScreen)
+        // 任意按键都先把控制条唤回，再处理 Esc 等动作。
+        ShowPlayerControls();
+
+        if (e.Key != Key.Escape)
+        {
+            return;
+        }
+
+        if (IsPlayerFullScreen)
         {
             ExitPlayerFullscreen();
         }
@@ -266,14 +303,9 @@ public partial class MainView : UserControl
         if (e.Property == Window.WindowStateProperty)
         {
             UpdateWindowState();
-
-            // 用户用系统快捷键/任务栏退出全屏时，恢复标题栏并同步按钮图标。
-            if (_playerFullScreen && _window?.WindowState != WindowState.FullScreen)
-            {
-                _playerFullScreen = false;
-                WindowAppearance.SetPlayerFullScreen(false);
-                UpdateImmersiveChrome();
-            }
+            // 窗口状态是唯一事实来源；全屏/最大化/还原只在这里同步显示状态，
+            // 不在多个按钮回调里各自维护第二套状态，避免闪烁和状态错位。
+            UpdateImmersiveChrome();
         }
         else if (e.Property.Name == nameof(Window.ActualTransparencyLevel))
         {
@@ -316,7 +348,11 @@ public partial class MainView : UserControl
     /// </summary>
     private void UpdateMaximizedContentInset()
     {
-        if (_window is null || _window.WindowState != WindowState.Maximized)
+        // 该补偿只针对 Windows 无边框窗口补回 WS_THICKFRAME 后的最大化客户区差异；
+        // Linux/Wayland 由合成器处理最大化边界，不应再叠加额外 Margin。
+        if (!OperatingSystem.IsWindows()
+            || _window is null
+            || _window.WindowState != WindowState.Maximized)
         {
             MainRoot.Margin = default;
             return;
@@ -375,6 +411,14 @@ public partial class MainView : UserControl
             return;
         }
 
+        // 全屏是独立状态：最大化按钮只负责普通最大化/还原。
+        // 如果窗口仍在全屏，先退出全屏，由系统全屏状态同步标题栏。
+        if (_window.WindowState == WindowState.FullScreen)
+        {
+            ExitPlayerFullscreen();
+            return;
+        }
+
         _window.WindowState = _window.WindowState == WindowState.Maximized
             ? WindowState.Normal
             : WindowState.Maximized;
@@ -398,14 +442,51 @@ public partial class MainView : UserControl
         _window?.Close();
     }
 
-    /// <summary>音频播放页双击切换全屏；视频原生画面暂不转发双击。</summary>
-    private void OnImmersiveSurfaceDoubleTapped(object? sender, TappedEventArgs e)
+    /// <summary>
+    /// 独立播放页手势：单击延迟到双击判定结束后暂停/继续，双击切换系统全屏。
+    /// 控制条区域由控件自行处理，避免手势与滑杆/按钮冲突。
+    /// </summary>
+    private void OnImmersiveSurfacePointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (_viewModel?.IsImmersiveAudio == true)
+        if (_viewModel?.IsImmersiveOpen != true || IsWithinPlayerControls(e.Source as Visual))
         {
+            return;
+        }
+
+        var point = e.GetCurrentPoint(ContentHost);
+        if (e.Pointer.Type != PointerType.Touch &&
+            point.Properties.PointerUpdateKind != PointerUpdateKind.LeftButtonPressed)
+        {
+            return;
+        }
+
+        if (e.ClickCount == 2)
+        {
+            _immersiveClickPending = false;
+            _immersiveClickTimer.Stop();
             TogglePlayerFullscreen();
             e.Handled = true;
         }
+        else if (e.ClickCount == 1)
+        {
+            _immersiveClickPending = true;
+            _immersiveClickTimer.Stop();
+            _immersiveClickTimer.Start();
+        }
+    }
+
+    private void OnImmersiveClickTick(object? sender, EventArgs e)
+    {
+        _immersiveClickTimer.Stop();
+        if (!_immersiveClickPending || _viewModel?.IsImmersiveOpen != true)
+        {
+            _immersiveClickPending = false;
+            return;
+        }
+
+        _immersiveClickPending = false;
+        _viewModel.PlayerBar.TogglePlayPauseCommand.Execute(null);
+        ShowPlayerControls();
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -414,6 +495,7 @@ public partial class MainView : UserControl
         {
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             _viewModel.PlayerBar.FullscreenToggleRequested -= OnFullscreenToggleRequested;
+            _viewModel.PlayerBar.PropertyChanged -= OnPlayerBarPropertyChanged;
         }
 
         _viewModel = DataContext as MainViewModel;
@@ -421,6 +503,7 @@ public partial class MainView : UserControl
         {
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
             _viewModel.PlayerBar.FullscreenToggleRequested += OnFullscreenToggleRequested;
+            _viewModel.PlayerBar.PropertyChanged += OnPlayerBarPropertyChanged;
             _viewModel.AttachTopLevel(TopLevel.GetTopLevel(this));
             if (_videoOutput is not null)
             {
@@ -428,6 +511,7 @@ public partial class MainView : UserControl
             }
 
             ShowPageView(_viewModel.SelectedPage);
+            UpdateMiniPlayerVisibility();
             ApplyImmersiveState(_viewModel.IsImmersiveOpen);
             UpdateVideoStage();
             UpdateImmersiveAudioLayer(immediate: true);
@@ -441,6 +525,7 @@ public partial class MainView : UserControl
         {
             SetNavigationOverlay(false);
             ShowPageView(_viewModel?.SelectedPage);
+            UpdateMiniPlayerVisibility();
         }
         else if (e.PropertyName == nameof(MainViewModel.IsVideoStageVisible))
         {
@@ -463,10 +548,28 @@ public partial class MainView : UserControl
         }
     }
 
+    /// <summary>播放状态变化时同步自动隐藏：暂停/打开中保持可见，恢复播放后重新计时。</summary>
+    private void OnPlayerBarPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(PlayerBarViewModel.IsPlaying) ||
+            _viewModel?.IsImmersiveOpen != true)
+        {
+            return;
+        }
+
+        ShowPlayerControls(autoHide: _viewModel.PlayerBar.IsPlaying);
+    }
+
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         ApplyLayoutMode(e.NewSize.Width);
         UpdateMaximizedContentInset();
+    }
+
+    /// <summary>迷你播放条只在需要常驻播放器的页面显示；设置页隐藏。</summary>
+    private void UpdateMiniPlayerVisibility()
+    {
+        MiniPlayerBar.IsVisible = _viewModel?.IsPlayerBarVisible != false;
     }
 
     /// <summary>
@@ -479,6 +582,9 @@ public partial class MainView : UserControl
         {
             return;
         }
+
+        // 换页时把播放控制复位为可见；非沉浸状态下该调用会被忽略。
+        ShowPlayerControls();
 
         var view = EnsurePageView(page);
         if (view is null)
@@ -572,8 +678,8 @@ public partial class MainView : UserControl
     }
 
     /// <summary>
-    /// 独立播放页：音视频共用 32 DIP 标题栏和窗口边框；系统全屏只由播放页里的
-    /// 全屏按钮触发，进入全屏时隐藏标题栏但保留底部 Popup 控制。
+    /// 独立播放页：音视频共用 32 DIP 标题栏和窗口边框；系统全屏只由播放页或
+    /// 迷你播放条的全屏按钮触发，进入全屏时隐藏标题栏；播放控制覆盖在画面上并自动隐藏。
     /// </summary>
     private void ApplyImmersiveState(bool isImmersive, bool force = false)
     {
@@ -592,7 +698,7 @@ public partial class MainView : UserControl
         MainRoot.Classes.Set("immersive", isImmersive);
         MainRoot.Classes.Set("player-immersive", isImmersive);
 
-        // 音频和视频都隐藏底部迷你播放条，控制由共享 Popup 提供。
+        // 音频和视频都隐藏底部迷你播放条，控制由播放页的覆盖控制条提供。
         BottomHost.IsVisible = !isImmersive;
 
         UpdateImmersiveChrome();
@@ -601,18 +707,22 @@ public partial class MainView : UserControl
         {
             SetNavigationOverlay(false);
         }
+        else
+        {
+            ResetPlayerControls();
+        }
 
         UpdateVideoStage();
     }
 
     /// <summary>
     /// 播放页普通状态下保留标题栏；系统全屏时隐藏标题栏，让视频/封面真正铺满屏幕。
-    /// 不使用 Topmost，也不在 Avalonia 主窗口内叠加原生视频；底部 Popup 控件保留。
+    /// 不使用 Topmost，也不单独弹出控制窗口；控制条覆盖在画面上并自动隐藏。
     /// </summary>
     private void UpdateImmersiveChrome()
     {
         var isImmersive = _viewModel?.IsImmersiveOpen == true;
-        var isPlayerFullscreen = isImmersive && _playerFullScreen;
+        var isPlayerFullscreen = IsPlayerFullScreen;
 
         TitleBarStrip.IsVisible = !isPlayerFullscreen;
         ShellGrid.RowDefinitions[0].Height = new GridLength(isPlayerFullscreen ? 0 : 32);
@@ -620,12 +730,165 @@ public partial class MainView : UserControl
 
         if (_viewModel is not null)
         {
-            _viewModel.PlayerBar.IsFullscreen = _playerFullScreen;
+            _viewModel.PlayerBar.IsFullscreen = isPlayerFullscreen;
+        }
+
+        // 进入/退出全屏都先把控制条恢复为可见，再按播放状态重新计时。
+        if (isImmersive)
+        {
+            ShowPlayerControls();
         }
     }
 
+    /// <summary>
+    /// 播放中 3 秒无操作后淡出控制条；暂停、打开中和悬停/拖动控制条时保持可见。
+    /// 显隐只改透明度和命中测试，不改变布局，避免视频表面重新排布。
+    /// </summary>
+    private void ShowPlayerControls(bool autoHide = true)
+    {
+        if (_viewModel?.IsImmersiveOpen != true)
+        {
+            return;
+        }
+
+        SetPlayerControlsVisible(true);
+        _playerControlsTimer.Stop();
+
+        if (autoHide && _viewModel.PlayerBar.IsPlaying)
+        {
+            _playerControlsTimer.Start();
+        }
+    }
+
+    /// <summary>隐藏控制条并收起光标；播放暂停或其它需要保持可见的状态由调用方恢复。</summary>
+    private void HidePlayerControls()
+    {
+        _playerControlsTimer.Stop();
+        SetPlayerControlsVisible(false);
+    }
+
+    /// <summary>退出播放页/全屏时恢复默认状态，避免下次进入仍带着隐藏透明度。</summary>
+    private void ResetPlayerControls()
+    {
+        _playerControlsTimer.Stop();
+        _isPlayerControlsPointerOver = false;
+        _isPlayerControlsPointerDown = false;
+        SetPlayerControlsVisible(true);
+    }
+
+    private void SetPlayerControlsVisible(bool visible)
+    {
+        var token = ++_playerControlsVisibilityToken;
+
+        if (visible)
+        {
+            _playerControlsVisible = true;
+            PlayerControlsHost.Opacity = 1;
+            PlayerControlsHost.IsHitTestVisible = true;
+            ContentHost.Cursor = null;
+            return;
+        }
+
+        _playerControlsVisible = false;
+        _isPlayerControlsPointerOver = false;
+        _isPlayerControlsPointerDown = false;
+        PlayerControlsHost.Opacity = 0;
+
+        // 淡出结束后再关闭命中测试并收起光标；中途重新唤回会作废这次回调。
+        DispatcherTimer.RunOnce(
+            () =>
+            {
+                if (token != _playerControlsVisibilityToken || _playerControlsVisible)
+                {
+                    return;
+                }
+
+                PlayerControlsHost.IsHitTestVisible = false;
+                ContentHost.Cursor = HiddenCursor;
+            },
+            PlayerControlsFadeDuration,
+            DispatcherPriority.Render);
+    }
+
+    private void OnPlayerControlsHideTick(object? sender, EventArgs e)
+    {
+        var playerBar = _viewModel?.PlayerBar;
+        if (_viewModel?.IsImmersiveOpen != true || playerBar is null || !playerBar.IsPlaying)
+        {
+            ShowPlayerControls(autoHide: false);
+            return;
+        }
+
+        // 指针停在控制条上、按住控件或正在拖动进度时继续等待下一次计时。
+        if (_isPlayerControlsPointerOver || _isPlayerControlsPointerDown || PlayerControlsView.IsSeeking)
+        {
+            return;
+        }
+
+        HidePlayerControls();
+    }
+
+    private void OnPlayerSurfacePointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_viewModel?.IsImmersiveOpen != true)
+        {
+            return;
+        }
+
+        _isPlayerControlsPointerOver = IsWithinPlayerControls(e.Source as Visual);
+        ShowPlayerControls();
+    }
+
+    private void OnPlayerSurfacePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (_viewModel?.IsImmersiveOpen != true)
+        {
+            return;
+        }
+
+        _isPlayerControlsPointerOver = IsWithinPlayerControls(e.Source as Visual);
+        _isPlayerControlsPointerDown = _isPlayerControlsPointerOver;
+        ShowPlayerControls();
+    }
+
+    private void OnPlayerSurfacePointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_viewModel?.IsImmersiveOpen != true)
+        {
+            return;
+        }
+
+        _isPlayerControlsPointerOver = IsWithinPlayerControls(e.Source as Visual);
+        _isPlayerControlsPointerDown = false;
+        ShowPlayerControls();
+    }
+
+    private bool IsWithinPlayerControls(Visual? source)
+    {
+        for (var visual = source; visual is not null; visual = visual.GetVisualParent())
+        {
+            if (ReferenceEquals(visual, PlayerControlsHost))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 迷你播放条与播放页共用的全屏请求：先确保处于独立播放页，
+    /// 再只切换系统全屏，不改变页面或沉浸状态。
+    /// </summary>
     private void OnFullscreenToggleRequested(object? sender, EventArgs e)
     {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        // 迷你播放条的全屏按钮需要先打开播放页；已在播放页时保持不变。
+        _viewModel.EnterImmersive();
         TogglePlayerFullscreen();
     }
 
@@ -636,7 +899,7 @@ public partial class MainView : UserControl
             return;
         }
 
-        if (_playerFullScreen)
+        if (IsPlayerFullScreen)
         {
             ExitPlayerFullscreen();
             return;
@@ -650,25 +913,23 @@ public partial class MainView : UserControl
         _restoreWindowState = _window.WindowState == WindowState.Maximized
             ? WindowState.Maximized
             : WindowState.Normal;
-        _playerFullScreen = true;
         WindowAppearance.SetPlayerFullScreen(true);
         _window.WindowState = WindowState.FullScreen;
         UpdateImmersiveChrome();
 
-        // Popup 里的按钮不抢焦点；切换全屏后把键盘焦点还给播放页，保证 Esc 可用。
+        // 控制条按钮不抢焦点；切换全屏后把键盘焦点还给播放页，保证 Esc 可用。
         _window.Activate();
     }
 
     private void ExitPlayerFullscreen(bool updateChrome = true)
     {
-        if (!_playerFullScreen)
+        if (_window is null)
         {
             return;
         }
 
-        _playerFullScreen = false;
         WindowAppearance.SetPlayerFullScreen(false);
-        if (_window is not null && _window.WindowState == WindowState.FullScreen)
+        if (_window.WindowState == WindowState.FullScreen)
         {
             _window.WindowState = _restoreWindowState;
         }
@@ -678,15 +939,15 @@ public partial class MainView : UserControl
             UpdateImmersiveChrome();
         }
 
-        _window?.Activate();
+        _window.Activate();
     }
 
     private void ResetImmersiveVisuals()
     {
         _immersiveApplied = null;
-        _playerFullScreen = false;
         WindowAppearance.SetPlayerFullScreen(false);
         _immersiveLayerToken++;
+        ResetPlayerControls();
         ImmersiveLayer.IsVisible = false;
         ImmersiveLayer.Opacity = 0;
         MainRoot.Classes.Set("immersive", false);
@@ -1010,7 +1271,7 @@ public partial class MainView : UserControl
 
         if (_viewModel?.IsImmersiveOpen == true)
         {
-            if (_playerFullScreen)
+            if (IsPlayerFullScreen)
             {
                 ExitPlayerFullscreen();
             }
