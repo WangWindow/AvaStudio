@@ -1,4 +1,3 @@
-#if LINUX
 using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
@@ -9,18 +8,18 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 using AvaStudio.Playback.Mpv;
 
-namespace AvaStudio.Platform.Linux;
+namespace AvaStudio.Platform;
 
 /// <summary>
-/// Linux 软件视频输出：通过 libmpv 的软件渲染 API 把视频帧画到 Avalonia 控件。
-/// 帧在 UI 线程写入 <see cref="WriteableBitmap"/>，因此不依赖原生窗口句柄，
-/// Wayland 与 X11 都能工作。默认路径使用 OpenGL；本实现保留给无 GL 环境。
+/// 跨平台软件视频输出：通过 libmpv 的软件渲染 API 把视频帧画到 Avalonia 控件。
+/// 帧在 UI 线程写入 <see cref="WriteableBitmap"/>，视频是普通 Avalonia 内容，
+/// 因此不依赖原生子窗口，点击、双击、全屏和跨屏布局都走标准 Avalonia 路径。
 /// </summary>
-public sealed class LinuxSoftwareVideoOutput : IMpvRenderVideoOutput
+public sealed class SoftwareVideoOutput : IMpvRenderVideoOutput
 {
     // 软件渲染的缩放/色彩转换是 CPU 单线程操作；限制目标尺寸，避免大窗口占满 CPU。
-    private const int MaxRenderWidth = 1920;
-    private const int MaxRenderHeight = 1080;
+    private const int MaxRenderWidth = 2560;
+    private const int MaxRenderHeight = 1440;
 
     private readonly Border _surface;
     private readonly Image _image;
@@ -35,7 +34,7 @@ public sealed class LinuxSoftwareVideoOutput : IMpvRenderVideoOutput
     private int _renderQueued;
     private bool _disposed;
 
-    public LinuxSoftwareVideoOutput()
+    public SoftwareVideoOutput()
     {
         _image = new Image
         {
@@ -78,21 +77,11 @@ public sealed class LinuxSoftwareVideoOutput : IMpvRenderVideoOutput
     /// <inheritdoc />
     public Control Surface => _surface;
 
-    /// <summary>渲染 API 不创建原生窗口，因此没有平台窗口 ID。</summary>
-    public long WindowId => 0;
-
     /// <summary>软件渲染不依赖平台窗口，始终可用；初始化失败会在播放时报告。</summary>
     public bool IsAvailable => true;
 
     /// <inheritdoc />
     public bool UsesOpenGl => false;
-
-    /// <summary>Linux 渲染输出没有原生句柄，因此不会触发。</summary>
-    public event EventHandler? HandleCreated
-    {
-        add { }
-        remove { }
-    }
 
     /// <summary>创建软件渲染上下文并开始接收帧通知。</summary>
     /// <remarks>可能在播放线程调用；实际绘制统一调度回 UI 线程。</remarks>
@@ -128,7 +117,7 @@ public sealed class LinuxSoftwareVideoOutput : IMpvRenderVideoOutput
         catch (Exception exception)
         {
             renderer?.Dispose();
-            Debug.WriteLine($"[Video] 初始化 Linux 视频渲染失败：{exception}");
+            Debug.WriteLine($"[Video] 初始化视频渲染失败：{exception}");
             ShowError($"无法初始化视频渲染：{exception.Message}");
             throw;
         }
@@ -288,4 +277,3 @@ public sealed class LinuxSoftwareVideoOutput : IMpvRenderVideoOutput
         });
     }
 }
-#endif

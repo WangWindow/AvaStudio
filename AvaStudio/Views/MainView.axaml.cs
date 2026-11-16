@@ -71,7 +71,9 @@ public partial class MainView : UserControl
         AddHandler(PointerMovedEvent, OnPlayerSurfacePointerMoved, RoutingStrategies.Tunnel, handledEventsToo: true);
         AddHandler(PointerPressedEvent, OnPlayerSurfacePointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
         AddHandler(PointerReleasedEvent, OnPlayerSurfacePointerReleased, RoutingStrategies.Tunnel, handledEventsToo: true);
-        ContentHost.AddHandler(
+        // 视频表面和音频沉浸层都在 BodyRoot 内；在这里统一拦截单击/双击，
+        // 使 libmpv 渲染出的视频也能使用普通 Avalonia 手势。
+        BodyRoot.AddHandler(
             PointerPressedEvent,
             OnImmersiveSurfacePointerPressed,
             RoutingStrategies.Tunnel,
@@ -152,7 +154,7 @@ public partial class MainView : UserControl
         UpdateWindowState();
         UpdateWindowMaterialClasses();
 
-        // 原生视频表面必须在窗口存在后才创建，HWND/XID 才能固定下来。
+        // 视频表面必须在窗口存在后创建，渲染上下文才能拿到正确的 TopLevel/缩放。
         EnsureVideoOutput();
         ApplyImmersiveState(_viewModel?.IsImmersiveOpen == true, force: true);
         UpdateVideoStage();
@@ -174,7 +176,7 @@ public partial class MainView : UserControl
 
     /// <summary>
     /// 创建平台视频表面并放进 <c>VideoHost</c>。只在窗口宿主上创建一次；
-    /// 表面缩到 1×1 但不会离开可视树，因此原生句柄可以复用。
+    /// 表面缩到 1×1 但不会离开可视树，因此位图和渲染上下文可以复用。
     /// </summary>
     private void EnsureVideoOutput()
     {
@@ -191,7 +193,7 @@ public partial class MainView : UserControl
         _viewModel?.AttachVideoOutput(output);
     }
 
-    /// <summary>窗口关闭/视图移除时释放原生表面；重新挂载时会重新创建。</summary>
+    /// <summary>窗口关闭/视图移除时释放视频表面；重新挂载时会重新创建。</summary>
     private void DisposeVideoOutput()
     {
         if (_videoStageApplied is not null)
@@ -365,17 +367,10 @@ public partial class MainView : UserControl
             return;
         }
 
-        var scaling = _window.RenderScaling;
-        if (scaling <= 0)
-        {
-            scaling = 1;
-        }
-
-        // Bounds 是 DIP，WorkingArea 是物理像素；先换算成物理差值再折回 DIP。
-        var clientWidth = _window.Bounds.Width * scaling;
-        var clientHeight = _window.Bounds.Height * scaling;
-        var insetX = Math.Max(0, (clientWidth - screen.WorkingArea.Width) / 2) / scaling;
-        var insetY = Math.Max(0, (clientHeight - screen.WorkingArea.Height) / 2) / scaling;
+        // Avalonia 的 Window.Bounds 与 Screen.WorkingArea 都是 DIP，可直接比较。
+        // 不能再用 RenderScaling 换算：跨屏后缩放会变化，二次相乘会把内容压成一小块。
+        var insetX = Math.Max(0, (_window.Bounds.Width - screen.WorkingArea.Width) / 2);
+        var insetY = Math.Max(0, (_window.Bounds.Height - screen.WorkingArea.Height) / 2);
 
         MainRoot.Margin = new Thickness(insetX, insetY, insetX, insetY);
     }
@@ -465,6 +460,7 @@ public partial class MainView : UserControl
             _immersiveClickPending = false;
             _immersiveClickTimer.Stop();
             TogglePlayerFullscreen();
+            ShowPlayerControls();
             e.Handled = true;
         }
         else if (e.ClickCount == 1)
@@ -969,7 +965,7 @@ public partial class MainView : UserControl
         var show = _viewModel?.IsImmersiveAudio == true;
 
         // 音频或视频沉浸打开时，底部播放条/状态栏都让位；
-        // 视频阶段不绘制 Avalonia 内容覆盖原生视频表面。
+        // 视频阶段不再需要为原生子窗口让位，底部播放条只由沉浸状态控制。
         BottomHost.IsVisible = _viewModel?.IsImmersiveOpen != true;
 
         if (!show && !ImmersiveLayer.IsVisible)

@@ -192,7 +192,7 @@ public sealed partial class MainViewModel : ViewModelBase
         _desktop.Attach(topLevel);
     }
 
-    /// <summary>由 MainView 在原生视频表面创建后调用。</summary>
+    /// <summary>由 MainView 在视频表面创建后调用。</summary>
     public void AttachVideoOutput(IVideoOutput videoOutput)
     {
         _videoOutput = videoOutput;

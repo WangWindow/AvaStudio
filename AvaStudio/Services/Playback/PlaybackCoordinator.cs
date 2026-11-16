@@ -37,9 +37,6 @@ public sealed class PlaybackCoordinator : IAsyncDisposable
     /// <summary>上一首时回到开头的判定阈值。</summary>
     private static readonly TimeSpan PreviousRestartThreshold = TimeSpan.FromSeconds(3);
 
-    /// <summary>等待原生视频表面创建的默认超时。</summary>
-    private static readonly TimeSpan VideoSurfaceWaitTimeout = TimeSpan.FromSeconds(2);
-
     private readonly LibraryService _library;
     private readonly AppSettingsService _settings;
     private readonly Func<IVideoOutput?> _videoOutputAccessor;
@@ -514,23 +511,6 @@ public sealed class PlaybackCoordinator : IAsyncDisposable
             }
 
             var output = _videoOutputAccessor();
-            if (output is { IsAvailable: false } && OperatingSystem.IsWindows())
-            {
-                // 原生视频表面可能刚加入可视树，短暂等待其 HWND/XID 创建。
-                var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                void OnHandleCreated(object? sender, EventArgs e) => completion.TrySetResult();
-                output.HandleCreated += OnHandleCreated;
-                try
-                {
-                    await Task.WhenAny(completion.Task, Task.Delay(VideoSurfaceWaitTimeout, cancellationToken))
-                        .ConfigureAwait(true);
-                }
-                finally
-                {
-                    output.HandleCreated -= OnHandleCreated;
-                }
-            }
-
             _runtime = await Task.Run(() => MpvRuntime.Create(output), cancellationToken).ConfigureAwait(true);
             var session = new MpvSession(
                 _runtime,

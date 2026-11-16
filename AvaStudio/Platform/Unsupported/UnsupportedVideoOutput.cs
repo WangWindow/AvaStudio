@@ -28,15 +28,7 @@ public sealed class UnsupportedVideoOutput : IVideoOutput
 
     public Control Surface => _surface;
 
-    public long WindowId => 0;
-
     public bool IsAvailable => false;
-
-    public event EventHandler? HandleCreated
-    {
-        add { }
-        remove { }
-    }
 
     public void Dispose()
     {

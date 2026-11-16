@@ -1,4 +1,3 @@
-#if LINUX
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -6,8 +5,8 @@ using System.Runtime.InteropServices;
 namespace AvaStudio.Playback.Mpv;
 
 /// <summary>
-/// Linux 视频输出使用的最小 libmpv render API 封装。渲染上下文使用软件后端，
-/// 把画面写入调用方提供的 BGRA 缓冲区。
+/// 视频输出使用的最小 libmpv render API 封装。软件渲染上下文把画面写入调用方提供的
+/// BGRA 缓冲区，OpenGL 后端直接绘制到 Avalonia 的离屏 FBO。
 /// </summary>
 internal static partial class LibMpvRender
 {
@@ -82,4 +81,3 @@ internal struct MpvOpenGlFbo
     public int Height;
     public int InternalFormat;
 }
-#endif

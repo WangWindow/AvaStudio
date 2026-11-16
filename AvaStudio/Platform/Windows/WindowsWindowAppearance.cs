@@ -90,19 +90,10 @@ internal static partial class WindowsWindowAppearance
                 return IntPtr.Zero;
             }
 
-            // 播放页全屏会覆盖整个显示器（含任务栏），此时不能再把客户区压回工作区，
-            // 否则任务栏会露出来；只有“最大化到工作区”的窗口才需要对齐。
-            if (GetWindowRect(hWnd, out var windowRect)
-                && windowRect.Left <= workArea.rcMonitor.Left
-                && windowRect.Top <= workArea.rcMonitor.Top
-                && windowRect.Right >= workArea.rcMonitor.Right
-                && windowRect.Bottom >= workArea.rcMonitor.Bottom)
-            {
-                return IntPtr.Zero;
-            }
-
             // NCCALCSIZE_PARAMS.rgrc[0] 位于 lParam 起始处，坐标为屏幕坐标。
             // WindowDecorations=None 时 Avalonia 不调整客户区，这里把客户区直接对齐工作区。
+            // 不能按“窗口是否覆盖显示器”判断全屏：无任务栏的副屏上工作区等于显示器，
+            // 最大化窗口也会覆盖显示器，跳过对齐会让客户区多出边框并被屏幕裁掉。
             var clientRect = new Rect
             {
                 Left = workArea.rcWork.Left,
@@ -160,10 +151,6 @@ internal static partial class WindowsWindowAppearance
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool IsZoomed(IntPtr hWnd);
-
-    [LibraryImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool GetWindowRect(IntPtr hWnd, out Rect rect);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct Point

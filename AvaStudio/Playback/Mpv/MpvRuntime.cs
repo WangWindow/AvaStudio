@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -9,9 +8,9 @@ namespace AvaStudio.Playback.Mpv;
 
 /// <summary>
 /// Owns native library resolution and the libmpv context. Resolution is app-private and has
-/// no system fallback; the video output is configured before <c>mpv_initialize</c> (native
-/// window id on Windows, libmpv render API on Linux) so video setup is fixed up front.
-/// The render context is released before the core is destroyed by <see cref="DisposeAsync"/>.
+/// no system fallback; the video output is configured to use the libmpv render API before
+/// <c>mpv_initialize</c>, and the render context is released before the core is destroyed by
+/// <see cref="DisposeAsync"/>.
 /// </summary>
 public sealed class MpvRuntime : IAsyncDisposable
 {
@@ -137,20 +136,15 @@ public sealed class MpvRuntime : IAsyncDisposable
 
         if (videoOutput is IMpvRenderVideoOutput renderOutput)
         {
-            // Linux 输出由应用自己绘制视频帧，不创建原生窗口。
+            // 视频由应用自己绘制成 Avalonia 内容，不创建原生窗口。
             // OpenGL 路径可以保留硬件解码；软件路径必须使用 CPU 可读帧。
             SetOption(context, "vo", "libmpv");
             SetOption(context, "hwdec", renderOutput.UsesOpenGl ? "auto-safe" : "no");
         }
-        else if (videoOutput is { IsAvailable: true } output && output.WindowId != 0)
-        {
-            SetOption(context, "hwdec", "auto-safe");
-            SetOption(context, "vo", "gpu");
-            SetOption(context, "wid", output.WindowId.ToString(CultureInfo.InvariantCulture));
-        }
         else
         {
-            SetOption(context, "hwdec", "auto-safe");
+            // 没有可用的视频表面时只播放音频，避免 libmpv 尝试打开任何窗口。
+            SetOption(context, "hwdec", "no");
             SetOption(context, "vo", "null");
         }
 

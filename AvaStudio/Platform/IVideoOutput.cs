@@ -6,46 +6,37 @@ using Avalonia.Controls;
 namespace AvaStudio.Platform;
 
 /// <summary>
-/// Native video surface. <see cref="Surface"/> is a real Avalonia control that the shell can
-/// lay out, clip and animate; the platform implementation owns the native child window behind
-/// it. The host must be realized (attached to a window) before <c>mpv_initialize</c> so the
-/// <c>wid</c> option is fixed up front. The surface stays in the visual tree while hidden so
-/// the native handle is not destroyed and can be reused.
+/// 视频输出表面。<see cref="Surface"/> 是普通的 Avalonia 控件，由主窗口布局、裁剪和动画，
+/// 不再依赖原生视频子窗口。播放层在创建 libmpv 时通过 <see cref="IMpvRenderVideoOutput"/>
+/// 把渲染上下文挂到该表面。
 /// </summary>
 public interface IVideoOutput : IDisposable
 {
-    /// <summary>Avalonia control that hosts the native video window.</summary>
+    /// <summary>承载视频画面的 Avalonia 控件。</summary>
     Control Surface { get; }
 
-    /// <summary>Native window id passed to libmpv as <c>wid</c>; 0 until realized/unavailable.</summary>
-    long WindowId { get; }
-
+    /// <summary>当前平台是否可以输出视频；不可用时播放层只输出音频。</summary>
     bool IsAvailable { get; }
-
-    /// <summary>Raised on the UI thread when the native child window has been created.</summary>
-    event EventHandler? HandleCreated;
 }
 
 /// <summary>
-/// Video surface that renders libmpv frames itself through the render API instead of
-/// embedding a native child window. The runtime calls <see cref="AttachMpvContext"/> after
-/// <c>mpv_initialize</c> and <see cref="DetachMpvContext"/> before the mpv core is destroyed.
+/// 通过 libmpv render API 自行绘制视频帧的输出表面。播放层在 <c>mpv_initialize</c> 之后
+/// 调用 <see cref="AttachMpvContext"/>，在销毁 mpv 核心之前调用 <see cref="ReleaseMpvContextAsync"/>。
 /// </summary>
 public interface IMpvRenderVideoOutput : IVideoOutput
 {
-    /// <summary>Whether this surface uses the OpenGL render backend (enables VAAPI/VDPAU interop).</summary>
+    /// <summary>是否使用 OpenGL 渲染后端（可启用硬件解码的帧互操作）。</summary>
     bool UsesOpenGl { get; }
 
     /// <summary>
-    /// Attach the initialized libmpv handle; called before the first file is loaded.
-    /// The implementation must create its render context before returning.
+    /// 挂接已初始化的 libmpv 上下文；必须在加载第一个文件之前返回可用的渲染上下文。
+    /// 实现可能由后台线程调用，内部需要自行切回 UI 线程。
     /// </summary>
     void AttachMpvContext(IntPtr mpvContext);
 
     /// <summary>
-    /// Release the render context before the mpv core is destroyed. Returns false if the
-    /// platform context could not be released in time, in which case the core must not be
-    /// destroyed while the render context may still be alive.
+    /// 在 mpv 核心销毁之前释放渲染上下文。返回 false 表示渲染上下文仍未释放，
+    /// 此时调用方不能销毁 mpv 核心，否则属于未定义行为。
     /// </summary>
     Task<bool> ReleaseMpvContextAsync(CancellationToken cancellationToken = default);
 }

@@ -45,21 +45,11 @@ public sealed partial class LinuxOpenGlVideoOutput : OpenGlControlBase, IMpvRend
 
     public Control Surface => this;
 
-    /// <summary>渲染 API 不创建原生窗口，因此没有平台窗口 ID。</summary>
-    public long WindowId => 0;
-
     /// <summary>OpenGL 渲染依赖 Avalonia 的 GL 后端；初始化失败会在播放时报告。</summary>
     public bool IsAvailable => true;
 
     /// <inheritdoc />
     public bool UsesOpenGl => true;
-
-    /// <summary>Linux 渲染输出没有原生句柄，因此不会触发。</summary>
-    public event EventHandler? HandleCreated
-    {
-        add { }
-        remove { }
-    }
 
     /// <summary>保存 mpv 句柄并等待 GL 渲染上下文创建完成。</summary>
     /// <remarks>

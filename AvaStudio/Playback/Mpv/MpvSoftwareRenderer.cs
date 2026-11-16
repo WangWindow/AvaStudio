@@ -1,4 +1,3 @@
-#if LINUX
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -135,8 +134,9 @@ internal sealed class MpvSoftwareRenderer : IDisposable
                 parameters[5] = default;
 
                 int error = LibMpvRender.mpv_render_context_render(_renderContext, (IntPtr)parameters);
-                if (error < 0)
+                if (error < 0 && error != -2)
                 {
+                    // -2 是 MPV_ERROR_NOTHING_TO_RENDER：音频/暂停/首帧前属于正常状态。
                     Debug.WriteLine($"[Video] libmpv 视频渲染失败：{LibMpv.ErrorString(error)}");
                     return false;
                 }
@@ -213,4 +213,3 @@ internal sealed class MpvSoftwareRenderer : IDisposable
         frameAvailable?.Invoke();
     }
 }
-#endif

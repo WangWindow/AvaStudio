@@ -320,8 +320,8 @@
           <!-- 缓存的页面视图层：每个页面只创建一次，切换时只改可见性。 -->
           <Grid x:Name="PageLayer" ZIndex="0" Background="Transparent" />
 
-          <!-- 原生视频表面：始终留在可视树中（只改尺寸，不隐藏），
-               这样窗口句柄不会随页面切换被销毁。默认缩到右下角 1×1。 -->
+          <!-- libmpv render API 视频表面：始终留在可视树中（只改尺寸，不隐藏），
+               这样渲染上下文和位图可以复用。默认缩到右下角 1×1。 -->
           <ContentControl x:Name="VideoHost"
             ZIndex="3"
             Width="1"
