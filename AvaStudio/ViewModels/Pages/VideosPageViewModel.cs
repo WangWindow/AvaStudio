@@ -51,6 +51,12 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
     /// <summary>当前文件夹中的直接视频。</summary>
     public ObservableCollection<MediaItemViewModel> FolderVideos { get; } = [];
 
+    /// <summary>当前目录的路径导航；从“视频”到当前文件夹。</summary>
+    public ObservableCollection<VideoBreadcrumbItem> Breadcrumbs { get; } = [];
+
+    /// <summary>是否显示路径导航。</summary>
+    public bool HasBreadcrumbs => Breadcrumbs.Count > 0;
+
     /// <summary>当前分区。</summary>
     [ObservableProperty]
     public partial VideoSection SelectedSection { get; set; } = VideoSection.Folders;
@@ -147,6 +153,11 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
         ? "视频"
         : _currentFolder.Name;
 
+    /// <summary>页面大标题：文件夹分区显示当前目录名，全部视频分区显示分区名。</summary>
+    public string PageHeading => SelectedSection == VideoSection.AllVideos
+        ? "所有视频"
+        : FolderHeading;
+
     partial void OnSelectedSectionChanged(VideoSection value)
     {
         RaiseViewProperties();
@@ -210,6 +221,62 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
         {
             SetCurrentFolder(parent);
         }
+    }
+
+    /// <summary>点击路径导航中的一节，直接跳到该目录。</summary>
+    private void NavigateToBreadcrumb(VideoDirectoryNode node)
+    {
+        SelectedSection = VideoSection.Folders;
+        SetCurrentFolder(node);
+    }
+
+    /// <summary>按当前目录向上构建“视频 › 根目录 › … › 当前目录”的路径。</summary>
+    private void RebuildBreadcrumbs(VideoDirectoryNode? folder)
+    {
+        Breadcrumbs.Clear();
+        if (folder is null)
+        {
+            OnPropertyChanged(nameof(HasBreadcrumbs));
+            return;
+        }
+
+        var roots = _services.Library.Snapshot.VideoRoots;
+        var chain = new List<VideoDirectoryNode>();
+        for (var node = folder; node is not null;)
+        {
+            chain.Add(node);
+            if (node.ParentPath is null)
+            {
+                break;
+            }
+
+            node = FindNode(roots, node.ParentPath);
+        }
+
+        chain.Reverse();
+        if (chain.Count == 0)
+        {
+            OnPropertyChanged(nameof(HasBreadcrumbs));
+            return;
+        }
+
+        // 第一节固定显示“视频”，点击回到当前资料库根目录。
+        Breadcrumbs.Add(new VideoBreadcrumbItem("视频", chain[0], isFirst: true, isCurrent: false, NavigateToBreadcrumb));
+
+        // 资料库根目录（例如 Videos）不单独占一节：子文件夹显示为“视频 › OBS”，
+        // 只有当前就在资料库根目录时才显示根目录名。
+        var displayed = chain.Count > 1 ? chain.Skip(1) : chain;
+        foreach (var item in displayed)
+        {
+            Breadcrumbs.Add(new VideoBreadcrumbItem(
+                item.Name,
+                item,
+                isFirst: false,
+                isCurrent: ReferenceEquals(item, folder),
+                NavigateToBreadcrumb));
+        }
+
+        OnPropertyChanged(nameof(HasBreadcrumbs));
     }
 
     /// <summary>添加视频文件夹并触发扫描。</summary>
@@ -284,6 +351,7 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
         _currentFolder = folder;
         OpenedFolderPath = folder?.Path;
         OpenedFolderName = folder?.Name ?? string.Empty;
+        RebuildBreadcrumbs(folder);
 
         Folders.Clear();
         FolderVideos.Clear();
@@ -382,6 +450,7 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
         OnPropertyChanged(nameof(VideoCountText));
         OnPropertyChanged(nameof(FolderCountText));
         OnPropertyChanged(nameof(FolderHeading));
+        OnPropertyChanged(nameof(PageHeading));
         OnPropertyChanged(nameof(VideoLocationCount));
         OnPropertyChanged(nameof(HasLibraryLocations));
     }
