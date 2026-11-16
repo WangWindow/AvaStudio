@@ -198,6 +198,7 @@ jobs:
 
           cp scripts/linux/AppRun "$appdir/AppRun"
           chmod +x "$appdir/AppRun"
+          cp scripts/linux/AvaStudio.desktop "$appdir/AvaStudio.desktop"
           cp scripts/linux/AvaStudio.desktop "$appdir/usr/share/applications/AvaStudio.desktop"
           convert "$iconroot/Icon.png" -resize 256x256 "$appdir/usr/share/icons/hicolor/256x256/apps/avastudio.png"
           cp "$appdir/usr/share/icons/hicolor/256x256/apps/avastudio.png" "$appdir/avastudio.png"
