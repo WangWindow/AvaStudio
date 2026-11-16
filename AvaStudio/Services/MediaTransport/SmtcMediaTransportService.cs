@@ -23,6 +23,7 @@ namespace AvaStudio.Services.MediaTransport;
 /// 用来拿到 SMTC 会话，不接管任何媒体源；播放状态、进度都由应用推送。
 /// SMTC 回调可能来自 WinRT 线程，因此只触发事件，不直接操作播放或界面。
 /// </remarks>
+#pragma warning disable CS0067
 public sealed class SmtcMediaTransportService : IMediaTransportService
 {
     /// <summary>非强制刷新时间轴的最小间隔，避免每个快照都跨线程调用 WinRT。</summary>
@@ -53,7 +54,12 @@ public sealed class SmtcMediaTransportService : IMediaTransportService
     public event EventHandler? NextRequested;
     public event EventHandler? PreviousRequested;
     public event EventHandler? StopRequested;
+    public event EventHandler? RaiseRequested;
+    public event EventHandler? QuitRequested;
     public event EventHandler<TimeSpan>? SeekRequested;
+    public event EventHandler<double>? VolumeRequested;
+    public event EventHandler<bool>? ShuffleRequested;
+    public event EventHandler<RepeatMode>? LoopStatusRequested;
 
     public Task InitializeAsync(CancellationToken cancellationToken = default)
     {
@@ -195,6 +201,10 @@ public sealed class SmtcMediaTransportService : IMediaTransportService
         }
 
         UpdateTimelineProperties(force: false);
+    }
+
+    public void UpdateVolume(double volume)
+    {
     }
 
     public void UpdatePlaybackMode(bool shuffle, RepeatMode repeat)
@@ -598,6 +608,7 @@ public sealed class SmtcMediaTransportService : IMediaTransportService
         }
     }
 }
+#pragma warning restore CS0067
 #else
 #pragma warning disable CS0067
 using System;
@@ -617,7 +628,12 @@ public sealed class SmtcMediaTransportService : IMediaTransportService
     public event EventHandler? NextRequested;
     public event EventHandler? PreviousRequested;
     public event EventHandler? StopRequested;
+    public event EventHandler? RaiseRequested;
+    public event EventHandler? QuitRequested;
     public event EventHandler<TimeSpan>? SeekRequested;
+    public event EventHandler<double>? VolumeRequested;
+    public event EventHandler<bool>? ShuffleRequested;
+    public event EventHandler<RepeatMode>? LoopStatusRequested;
 
     public Task InitializeAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 
@@ -628,6 +644,10 @@ public sealed class SmtcMediaTransportService : IMediaTransportService
     }
 
     public void UpdatePosition(TimeSpan position, TimeSpan duration)
+    {
+    }
+
+    public void UpdateVolume(double volume)
     {
     }
 

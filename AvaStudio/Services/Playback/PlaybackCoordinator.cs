@@ -319,6 +319,18 @@ public sealed class PlaybackCoordinator : IAsyncDisposable
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>设置随机播放（系统媒体控制使用）。</summary>
+    public void SetShuffle(bool shuffle)
+    {
+        if (_shuffle == shuffle)
+        {
+            return;
+        }
+
+        _shuffle = shuffle;
+        StateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     /// <summary>按“不循环 → 全部循环 → 单曲循环”的顺序切换。</summary>
     public void CycleRepeatMode()
     {
@@ -328,6 +340,18 @@ public sealed class PlaybackCoordinator : IAsyncDisposable
             RepeatMode.All => RepeatMode.One,
             _ => RepeatMode.None,
         };
+        StateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>设置循环模式（系统媒体控制使用）。</summary>
+    public void SetRepeatMode(RepeatMode repeatMode)
+    {
+        if (_repeatMode == repeatMode)
+        {
+            return;
+        }
+
+        _repeatMode = repeatMode;
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -464,8 +488,12 @@ public sealed class PlaybackCoordinator : IAsyncDisposable
             _session = null;
         }
 
-        _runtime?.Dispose();
-        _runtime = null;
+        if (_runtime is not null)
+        {
+            await _runtime.DisposeAsync().ConfigureAwait(false);
+            _runtime = null;
+        }
+
         _sessionGate.Dispose();
     }
 
@@ -515,8 +543,12 @@ public sealed class PlaybackCoordinator : IAsyncDisposable
         }
         catch (Exception exception)
         {
-            _runtime?.Dispose();
-            _runtime = null;
+            if (_runtime is not null)
+            {
+                await _runtime.DisposeAsync().ConfigureAwait(false);
+                _runtime = null;
+            }
+
             _session = null;
             throw new InvalidOperationException(
                 $"无法加载 libmpv 播放引擎：{exception.Message}。请确认 libmpv 原生库已放在应用目录下。",

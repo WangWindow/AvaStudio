@@ -338,7 +338,7 @@ public sealed class MpvSession : IPlaybackSession
             _eventLoop.Join();
         }
 
-        _runtime.Dispose();
+        await _runtime.DisposeAsync().ConfigureAwait(false);
 
         Mutate(
             () =>

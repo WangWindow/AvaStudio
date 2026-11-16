@@ -19,6 +19,7 @@
     <PackageVersion Include="FluentIcons.Avalonia" Version="2.1.345" />
     <PackageVersion Include="TagLibSharp" Version="2.3.0" />
     <PackageVersion Include="TinyPinyin" Version="1.1.0" />
+    <PackageVersion Include="Tmds.DBus.Protocol" Version="0.95.2" />
     <PackageVersion Include="Xamarin.AndroidX.Core.SplashScreen" Version="1.2.0.3" />
     <PackageVersion Include="WixToolset.UI.wixext" Version="7.0.0" />
   </ItemGroup>

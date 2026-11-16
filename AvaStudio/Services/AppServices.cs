@@ -1,6 +1,9 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using AvaStudio.Playback;
 using AvaStudio.Platform;
@@ -36,7 +39,12 @@ public sealed class AppServices : IAsyncDisposable
         MediaTransport.NextRequested += OnMediaTransportNextRequested;
         MediaTransport.PreviousRequested += OnMediaTransportPreviousRequested;
         MediaTransport.StopRequested += OnMediaTransportStopRequested;
+        MediaTransport.RaiseRequested += OnMediaTransportRaiseRequested;
+        MediaTransport.QuitRequested += OnMediaTransportQuitRequested;
         MediaTransport.SeekRequested += OnMediaTransportSeekRequested;
+        MediaTransport.VolumeRequested += OnMediaTransportVolumeRequested;
+        MediaTransport.ShuffleRequested += OnMediaTransportShuffleRequested;
+        MediaTransport.LoopStatusRequested += OnMediaTransportLoopStatusRequested;
 
         // 播放协调器是唯一事实来源：每次当前条目/状态变化都投影到系统媒体控制。
         Playback.CurrentItemChanged += OnPlaybackCurrentItemChanged;
@@ -64,7 +72,7 @@ public sealed class AppServices : IAsyncDisposable
     /// <summary>播放队列与媒体会话协调。</summary>
     public PlaybackCoordinator Playback { get; }
 
-    /// <summary>系统媒体控制集成（Windows 为 SMTC，其余平台为空实现）。</summary>
+    /// <summary>系统媒体控制集成（Windows 为 SMTC，Linux 为 MPRIS）。</summary>
     public IMediaTransportService MediaTransport { get; }
 
     /// <summary>启动时读取缓存；有资料库位置时在后台刷新索引。</summary>
@@ -99,7 +107,12 @@ public sealed class AppServices : IAsyncDisposable
         MediaTransport.NextRequested -= OnMediaTransportNextRequested;
         MediaTransport.PreviousRequested -= OnMediaTransportPreviousRequested;
         MediaTransport.StopRequested -= OnMediaTransportStopRequested;
+        MediaTransport.RaiseRequested -= OnMediaTransportRaiseRequested;
+        MediaTransport.QuitRequested -= OnMediaTransportQuitRequested;
         MediaTransport.SeekRequested -= OnMediaTransportSeekRequested;
+        MediaTransport.VolumeRequested -= OnMediaTransportVolumeRequested;
+        MediaTransport.ShuffleRequested -= OnMediaTransportShuffleRequested;
+        MediaTransport.LoopStatusRequested -= OnMediaTransportLoopStatusRequested;
 
         // 先注销系统媒体会话，再关闭播放引擎，避免系统按钮在拆除过程中进入已释放的会话。
         try
@@ -163,6 +176,7 @@ public sealed class AppServices : IAsyncDisposable
             var duration = snapshot.Duration ?? Playback.CurrentItem?.Duration ?? TimeSpan.Zero;
             MediaTransport.UpdatePlaybackState(snapshot.Phase);
             MediaTransport.UpdatePosition(snapshot.Position, duration);
+            MediaTransport.UpdateVolume(Playback.Volume / 100.0);
             MediaTransport.UpdatePlaybackMode(Playback.IsShuffle, Playback.RepeatMode);
         }
         catch (Exception exception)
@@ -226,9 +240,81 @@ public sealed class AppServices : IAsyncDisposable
     private void OnMediaTransportPreviousRequested(object? sender, EventArgs e) =>
         RunOnUiThread(() => Playback.PreviousAsync());
 
+    /// <summary>系统“停止”回调；D-Bus/SMTC 线程只负责转发。</summary>
     private void OnMediaTransportStopRequested(object? sender, EventArgs e) =>
         RunOnUiThread(() => Playback.StopAsync());
 
+    /// <summary>系统“Raise”回调（MPRIS）：把主窗口带到前台。</summary>
+    private void OnMediaTransportRaiseRequested(object? sender, EventArgs e) =>
+        RunOnUiThread(() =>
+        {
+            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                && desktop.MainWindow is { } window)
+            {
+                if (!window.IsVisible)
+                {
+                    window.Show();
+                }
+
+                if (window.WindowState == WindowState.Minimized)
+                {
+                    window.WindowState = WindowState.Normal;
+                }
+
+                window.Activate();
+            }
+
+            return Task.CompletedTask;
+        });
+
+    /// <summary>系统“退出”回调（MPRIS Quit）：关闭主窗口并走正常释放流程。</summary>
+    private void OnMediaTransportQuitRequested(object? sender, EventArgs e) =>
+        RunOnUiThread(() =>
+        {
+            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                if (desktop.MainWindow is { } window)
+                {
+                    window.Close();
+                }
+                else
+                {
+                    desktop.Shutdown();
+                }
+            }
+
+            return Task.CompletedTask;
+        });
+
+    /// <summary>系统“跳转”回调；位置由 MPRIS/SMTC 换算成时间戳。</summary>
     private void OnMediaTransportSeekRequested(object? sender, TimeSpan position) =>
         RunOnUiThread(() => Playback.SeekAsync(position));
+
+    /// <summary>系统“设置音量”回调；0..1 转换为应用音量，并在非零时解除静音。</summary>
+    private void OnMediaTransportVolumeRequested(object? sender, double volume) =>
+        RunOnUiThread(async () =>
+        {
+            if (volume > 0 && Playback.IsMuted)
+            {
+                await Playback.ToggleMuteAsync().ConfigureAwait(true);
+            }
+
+            await Playback.SetVolumeAsync(Math.Clamp(volume, 0.0, 1.0) * 100.0).ConfigureAwait(true);
+        });
+
+    /// <summary>系统“设置随机播放”回调。</summary>
+    private void OnMediaTransportShuffleRequested(object? sender, bool shuffle) =>
+        RunOnUiThread(() =>
+        {
+            Playback.SetShuffle(shuffle);
+            return Task.CompletedTask;
+        });
+
+    /// <summary>系统“设置循环模式”回调。</summary>
+    private void OnMediaTransportLoopStatusRequested(object? sender, RepeatMode repeatMode) =>
+        RunOnUiThread(() =>
+        {
+            Playback.SetRepeatMode(repeatMode);
+            return Task.CompletedTask;
+        });
 }

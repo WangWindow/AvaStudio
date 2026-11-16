@@ -1,29 +1,40 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using AvaStudio.Platform;
 
 namespace AvaStudio.Playback.Mpv;
 
 /// <summary>
 /// Owns native library resolution and the libmpv context. Resolution is app-private and has
-/// no system fallback; the context is configured before <c>mpv_initialize</c> so the video
-/// window id is fixed up front.
+/// no system fallback; the video output is configured before <c>mpv_initialize</c> (native
+/// window id on Windows, libmpv render API on Linux) so video setup is fixed up front.
+/// The render context is released before the core is destroyed by <see cref="DisposeAsync"/>.
 /// </summary>
-public sealed class MpvRuntime : IDisposable
+public sealed class MpvRuntime : IAsyncDisposable
 {
     private static readonly Lock ResolverLock = new();
     private static bool s_resolverInstalled;
     private static IntPtr s_libraryHandle;
 
+    private readonly IVideoOutput? _videoOutput;
+
     private IntPtr _context;
 
-    private MpvRuntime(IntPtr context, string nativeLibraryPath, string mpvVersion, ulong clientApiVersion)
+    private MpvRuntime(
+        IntPtr context,
+        string nativeLibraryPath,
+        string mpvVersion,
+        ulong clientApiVersion,
+        IVideoOutput? videoOutput)
     {
         _context = context;
         NativeLibraryPath = nativeLibraryPath;
         MpvVersion = mpvVersion;
         ClientApiVersion = clientApiVersion;
+        _videoOutput = videoOutput;
     }
 
     public string NativeLibraryPath { get; }
@@ -57,7 +68,13 @@ public sealed class MpvRuntime : IDisposable
 
             string version = GetStringProperty(context, "mpv-version");
             ulong apiVersion = LibMpv.mpv_client_api_version();
-            return new MpvRuntime(context, libraryPath, version, apiVersion);
+            var runtime = new MpvRuntime(context, libraryPath, version, apiVersion, videoOutput);
+            if (videoOutput is IMpvRenderVideoOutput renderOutput)
+            {
+                renderOutput.AttachMpvContext(context);
+            }
+
+            return runtime;
         }
         catch
         {
@@ -66,13 +83,37 @@ public sealed class MpvRuntime : IDisposable
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         IntPtr context = Interlocked.Exchange(ref _context, IntPtr.Zero);
-        if (context != IntPtr.Zero)
+        if (context == IntPtr.Zero)
         {
-            LibMpv.mpv_terminate_destroy(context);
+            return;
         }
+
+        if (_videoOutput is IMpvRenderVideoOutput renderOutput)
+        {
+            bool released;
+            try
+            {
+                released = await renderOutput.ReleaseMpvContextAsync().ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                Debug.WriteLine($"[Video] 释放视频渲染上下文失败：{exception}");
+                released = false;
+            }
+
+            if (!released)
+            {
+                // 渲染上下文仍可能引用 mpv 核心；此时销毁核心是未定义行为，只能放弃本次清理。
+                Debug.WriteLine("[Video] 视频渲染上下文未释放，跳过 mpv 核心销毁。");
+                return;
+            }
+        }
+
+        // mpv_terminate_destroy 可能等待解码/显示线程退出，不阻塞 UI 线程。
+        await Task.Run(() => LibMpv.mpv_terminate_destroy(context)).ConfigureAwait(false);
     }
 
     private static void Configure(IntPtr context, IVideoOutput? videoOutput)
@@ -82,16 +123,24 @@ public sealed class MpvRuntime : IDisposable
         SetOption(context, "terminal", "no");
         SetOption(context, "input-default-bindings", "no");
         SetOption(context, "osc", "no");
-        SetOption(context, "hwdec", "auto-safe");
         SetOption(context, "audio-client-name", "AvaStudio");
 
-        if (videoOutput is { IsAvailable: true } output && output.WindowId != 0)
+        if (videoOutput is IMpvRenderVideoOutput renderOutput)
         {
+            // Linux 输出由应用自己绘制视频帧，不创建原生窗口。
+            // OpenGL 路径可以保留硬件解码；软件路径必须使用 CPU 可读帧。
+            SetOption(context, "vo", "libmpv");
+            SetOption(context, "hwdec", renderOutput.UsesOpenGl ? "auto-safe" : "no");
+        }
+        else if (videoOutput is { IsAvailable: true } output && output.WindowId != 0)
+        {
+            SetOption(context, "hwdec", "auto-safe");
             SetOption(context, "vo", "gpu");
             SetOption(context, "wid", output.WindowId.ToString(CultureInfo.InvariantCulture));
         }
         else
         {
+            SetOption(context, "hwdec", "auto-safe");
             SetOption(context, "vo", "null");
         }
 

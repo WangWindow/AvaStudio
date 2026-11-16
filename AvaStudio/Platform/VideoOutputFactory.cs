@@ -8,7 +8,7 @@ using AvaStudio.Platform.Linux;
 namespace AvaStudio.Platform;
 
 /// <summary>
-/// Compile-time platform selection for the native video surface. The returned
+/// Compile-time platform selection for the video surface. The returned
 /// <see cref="IVideoOutput.Surface"/> is placed in the shell's visual tree and realized before
 /// the playback runtime is created.
 /// </summary>
@@ -19,7 +19,12 @@ public static class VideoOutputFactory
 #if WINDOWS
         return new WindowsVideoOutput();
 #elif LINUX
-        return new LinuxVideoOutput();
+        // 默认走 OpenGL 渲染；软件渲染保留为无 GL 集成环境的回退路径。
+        var software = string.Equals(
+            Environment.GetEnvironmentVariable("AVASTUDIO_LINUX_VIDEO"),
+            "software",
+            StringComparison.OrdinalIgnoreCase);
+        return software ? new LinuxSoftwareVideoOutput() : new LinuxOpenGlVideoOutput();
 #else
         return new UnsupportedVideoOutput();
 #endif

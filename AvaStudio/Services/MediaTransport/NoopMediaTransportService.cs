@@ -16,7 +16,12 @@ public sealed class NoopMediaTransportService : IMediaTransportService
     public event EventHandler? NextRequested;
     public event EventHandler? PreviousRequested;
     public event EventHandler? StopRequested;
+    public event EventHandler? RaiseRequested;
+    public event EventHandler? QuitRequested;
     public event EventHandler<TimeSpan>? SeekRequested;
+    public event EventHandler<double>? VolumeRequested;
+    public event EventHandler<bool>? ShuffleRequested;
+    public event EventHandler<RepeatMode>? LoopStatusRequested;
 
     public Task InitializeAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 
@@ -27,6 +32,10 @@ public sealed class NoopMediaTransportService : IMediaTransportService
     }
 
     public void UpdatePosition(TimeSpan position, TimeSpan duration)
+    {
+    }
+
+    public void UpdateVolume(double volume)
     {
     }
 

@@ -31,8 +31,23 @@ public interface IMediaTransportService : IDisposable
     /// <summary>系统请求停止。</summary>
     event EventHandler? StopRequested;
 
+    /// <summary>系统请求把应用窗口带到前台。</summary>
+    event EventHandler? RaiseRequested;
+
+    /// <summary>系统请求退出应用。</summary>
+    event EventHandler? QuitRequested;
+
     /// <summary>系统请求跳转到指定位置。</summary>
     event EventHandler<TimeSpan>? SeekRequested;
+
+    /// <summary>系统请求设置音量，参数范围为 0..1。</summary>
+    event EventHandler<double>? VolumeRequested;
+
+    /// <summary>系统请求设置随机播放。</summary>
+    event EventHandler<bool>? ShuffleRequested;
+
+    /// <summary>系统请求设置循环模式。</summary>
+    event EventHandler<RepeatMode>? LoopStatusRequested;
 
     /// <summary>初始化平台媒体控制；失败时实现应自行降级，不抛异常打断启动。</summary>
     Task InitializeAsync(CancellationToken cancellationToken = default);
@@ -45,6 +60,9 @@ public interface IMediaTransportService : IDisposable
 
     /// <summary>更新播放位置与时长。</summary>
     void UpdatePosition(TimeSpan position, TimeSpan duration);
+
+    /// <summary>更新音量，参数范围为 0..1。</summary>
+    void UpdateVolume(double volume);
 
     /// <summary>更新随机与循环模式。</summary>
     void UpdatePlaybackMode(bool shuffle, RepeatMode repeat);
