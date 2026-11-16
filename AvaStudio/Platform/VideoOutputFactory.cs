@@ -1,5 +1,7 @@
 using AvaStudio.Platform.Unsupported;
-#if LINUX
+#if WINDOWS
+using AvaStudio.Platform.Windows;
+#elif LINUX
 using AvaStudio.Platform.Linux;
 #endif
 
@@ -11,14 +13,16 @@ namespace AvaStudio.Platform;
 /// </summary>
 public static class VideoOutputFactory
 {
-    public static IVideoOutput Create()
+    /// <param name="useGpuVideoRendering">
+    /// Windows 下为 true 时使用 OpenGL/ANGLE：支持 HDR 色调映射和 GPU 缩放，
+    /// 但 4K 视频私有内存明显更高。Linux 仍按原有环境变量选择 OpenGL。
+    /// </param>
+    public static IVideoOutput Create(bool useGpuVideoRendering = false)
     {
 #if WINDOWS
-        // Windows 使用软件 render API：视频是普通 Avalonia 内容，
-        // 不创建原生子窗口，点击/双击/全屏/跨屏布局都由 Avalonia 处理。
-        // ANGLE/OpenGL render API 在本机 Intel 驱动上私有内存反而高很多，
-        // 因此不作为默认路径。
-        return new SoftwareVideoOutput();
+        // 默认软件 render API：视频是普通 Avalonia 内容，不创建原生子窗口。
+        // GPU 模式由设置页显式开启（HDR/高画质），避免默认占用过高内存。
+        return useGpuVideoRendering ? new WindowsOpenGlVideoOutput() : new SoftwareVideoOutput();
 #elif LINUX
         var software = string.Equals(
             Environment.GetEnvironmentVariable("AVASTUDIO_LINUX_VIDEO"),

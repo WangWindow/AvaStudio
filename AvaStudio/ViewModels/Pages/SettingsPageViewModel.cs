@@ -55,6 +55,10 @@ public sealed partial class SettingsPageViewModel : PageViewModelBase
     [ObservableProperty]
     public partial bool RecordRecentPlayback { get; set; }
 
+    /// <summary>是否使用 GPU 视频渲染；修改后下次启动生效。</summary>
+    [ObservableProperty]
+    public partial bool UseGpuVideoRendering { get; set; }
+
     /// <summary>应用版本号。</summary>
     public string AppVersion => typeof(SettingsPageViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
 
@@ -181,6 +185,11 @@ public sealed partial class SettingsPageViewModel : PageViewModelBase
         _services.Settings.SetRecordRecentPlayback(value);
     }
 
+    partial void OnUseGpuVideoRenderingChanged(bool value)
+    {
+        _services.Settings.SetUseGpuVideoRendering(value);
+    }
+
     /// <summary>把设置文件中的值同步到界面属性，避免外部修改后控件显示旧值。</summary>
     private void SyncSettingValues()
     {
@@ -197,6 +206,11 @@ public sealed partial class SettingsPageViewModel : PageViewModelBase
         if (RecordRecentPlayback != _services.Settings.RecordRecentPlayback)
         {
             RecordRecentPlayback = _services.Settings.RecordRecentPlayback;
+        }
+
+        if (UseGpuVideoRendering != _services.Settings.UseGpuVideoRendering)
+        {
+            UseGpuVideoRendering = _services.Settings.UseGpuVideoRendering;
         }
 
         var themeIndex = _services.Settings.Theme switch

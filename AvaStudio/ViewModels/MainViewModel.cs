@@ -192,6 +192,9 @@ public sealed partial class MainViewModel : ViewModelBase
         _desktop.Attach(topLevel);
     }
 
+    /// <summary>是否使用 GPU 视频渲染；由设置页控制，视频表面创建时读取。</summary>
+    public bool UseGpuVideoRendering => _services.Settings.UseGpuVideoRendering;
+
     /// <summary>由 MainView 在视频表面创建后调用。</summary>
     public void AttachVideoOutput(IVideoOutput videoOutput)
     {

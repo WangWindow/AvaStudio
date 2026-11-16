@@ -291,6 +291,32 @@
           <Border Classes="settings-row">
             <Grid ColumnDefinitions="Auto,*,Auto" Margin="20,0" MinHeight="80">
               <Border Classes="settings-icon">
+                <fi:SymbolIcon Symbol="Video"
+                  FontSize="20"
+                  Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center" />
+              </Border>
+
+              <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center" Spacing="3">
+                <TextBlock Classes="settings-row-title" Text="GPU 视频渲染（HDR / 高画质）" />
+                <TextBlock Classes="settings-row-description"
+                  Text="开启后使用 ANGLE/OpenGL 渲染，支持 HDR 色调映射、GPU 缩放和 4K 高帧率；内存占用会明显增加。修改后下次启动生效。" />
+              </StackPanel>
+
+              <ToggleSwitch Grid.Column="2"
+                IsChecked="{Binding UseGpuVideoRendering, Mode=TwoWay}"
+                OnContent="开"
+                OffContent="关"
+                VerticalAlignment="Center"
+                AutomationProperties.Name="GPU 视频渲染"
+                ToolTip.Tip="HDR/高画质模式，内存占用更高；修改后下次启动生效" />
+            </Grid>
+          </Border>
+
+          <Border Classes="settings-row">
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="20,0" MinHeight="80">
+              <Border Classes="settings-icon">
                 <fi:SymbolIcon Symbol="Delete"
                   FontSize="20"
                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"

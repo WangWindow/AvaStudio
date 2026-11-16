@@ -184,7 +184,7 @@ public partial class MainView : UserControl
             return;
         }
 
-        var output = VideoOutputFactory.Create();
+        var output = VideoOutputFactory.Create(_viewModel?.UseGpuVideoRendering == true);
         _videoOutput = output;
         output.Surface.HorizontalAlignment = HorizontalAlignment.Stretch;
         output.Surface.VerticalAlignment = VerticalAlignment.Stretch;

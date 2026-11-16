@@ -141,7 +141,8 @@ public sealed class MpvRuntime : IAsyncDisposable
         SetOption(context, "demuxer-max-back-bytes", "4MiB");
         SetOption(context, "demuxer-readahead-secs", "2");
         SetOption(context, "cache-secs", "2");
-        SetOption(context, "vd-lavc-threads", "2");
+        // 4K/HEVC 需要更多解码线程；线程数增加的内存占用远小于硬件回传缓冲。
+        SetOption(context, "vd-lavc-threads", "4");
         SetOption(context, "audio-buffer", "0.2");
 
         // 软件渲染默认的双线性缩放在高分辨率素材上会明显发软；
@@ -151,6 +152,22 @@ public sealed class MpvRuntime : IAsyncDisposable
         SetOption(context, "zimg-scaler", "lanczos");
         SetOption(context, "zimg-scaler-param-a", "3");
         SetOption(context, "video-output-levels", "full");
+
+        // HDR/10-bit 素材最终输出到 8-bit SDR 位图：用 BT.2390 色调映射、
+        // 感知色域映射和误差扩散抖动，避免高光裁剪和渐变色带。
+        // 注意：软件 render API 不提供 HDR 直通，HDR 会被映射到 SDR。
+        SetOption(context, "tone-mapping", "bt.2390");
+        SetOption(context, "hdr-compute-peak", "yes");
+        SetOption(context, "gamut-mapping-mode", "perceptual");
+        SetOption(context, "target-prim", "bt.709");
+        SetOption(context, "target-trc", "srgb");
+        SetOption(context, "target-peak", "200");
+        SetOption(context, "dither-depth", "8");
+        SetOption(context, "zimg-dither", "error-diffusion");
+        SetOption(context, "deband", "yes");
+        SetOption(context, "deband-iterations", "2");
+        SetOption(context, "deband-threshold", "48");
+        SetOption(context, "deband-grain", "0");
 
         // OpenGL render API 使用的 GPU 缩放参数；软件渲染会自动忽略这些选项。
         SetOption(context, "scale", "ewa_lanczossharp");
@@ -165,8 +182,8 @@ public sealed class MpvRuntime : IAsyncDisposable
             // 视频由应用自己绘制成 Avalonia 内容，不创建原生窗口。
             // OpenGL 路径可以保留硬件解码；软件路径必须使用 CPU 可读帧。
             SetOption(context, "vo", "libmpv");
-            // 软件 render API 需要 CPU 可读帧。auto-copy 在本机反而多一层
-            // D3D11 回传缓冲，因此保持软件解码，由渲染层限制帧缓冲。
+            // 软件 render API 需要 CPU 可读帧；OpenGL/ANGLE 路径在本机与
+            // D3D11VA 零拷贝互操作不兼容，硬件解码会拖慢 4K HDR，保持软件解码。
             SetOption(context, "hwdec", "no");
         }
         else

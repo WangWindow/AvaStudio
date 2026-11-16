@@ -39,6 +39,9 @@ public sealed class AppSettingsService
     /// <summary>默认记录最近播放；关闭后删除历史记录文件。</summary>
     public const bool DefaultRecordRecentPlayback = true;
 
+    /// <summary>默认使用软件视频渲染；GPU 渲染用于 HDR/高画质，内存占用更高。</summary>
+    public const bool DefaultUseGpuVideoRendering = false;
+
     private readonly string _settingsFilePath;
 
     public AppSettingsService()
@@ -60,6 +63,7 @@ public sealed class AppSettingsService
             AutoAdvance = DefaultAutoAdvance;
             MultiInstance = DefaultMultiInstance;
             RecordRecentPlayback = DefaultRecordRecentPlayback;
+            UseGpuVideoRendering = DefaultUseGpuVideoRendering;
         }
 
     }
@@ -96,6 +100,12 @@ public sealed class AppSettingsService
 
     /// <summary>是否记录最近播放；关闭后不再写入并删除已有记录文件。</summary>
     public bool RecordRecentPlayback { get; private set; } = DefaultRecordRecentPlayback;
+
+    /// <summary>
+    /// 是否使用 ANGLE/OpenGL 视频渲染；开启后支持 HDR 色调映射和 GPU 缩放，
+    /// 但 4K 视频的私有内存会明显上升。修改后下次启动生效。
+    /// </summary>
+    public bool UseGpuVideoRendering { get; private set; } = DefaultUseGpuVideoRendering;
 
     /// <summary>任何设置发生变化时触发；事件在 UI 线程触发。</summary>
     public event EventHandler? Changed;
@@ -158,6 +168,18 @@ public sealed class AppSettingsService
         }
 
         MultiInstance = multiInstance;
+        SaveAndNotify();
+    }
+
+    /// <summary>更新视频渲染模式；下次启动时由视频输出工厂读取。</summary>
+    public void SetUseGpuVideoRendering(bool useGpuVideoRendering)
+    {
+        if (UseGpuVideoRendering == useGpuVideoRendering)
+        {
+            return;
+        }
+
+        UseGpuVideoRendering = useGpuVideoRendering;
         SaveAndNotify();
     }
 
@@ -285,6 +307,7 @@ public sealed class AppSettingsService
             AutoAdvance = document.AutoAdvance;
             MultiInstance = document.MultiInstance;
             RecordRecentPlayback = document.RecordRecentPlayback;
+            UseGpuVideoRendering = document.UseGpuVideoRendering;
             return true;
         }
         catch (Exception exception) when (
@@ -311,6 +334,7 @@ public sealed class AppSettingsService
                 AutoAdvance = AutoAdvance,
                 MultiInstance = MultiInstance,
                 RecordRecentPlayback = RecordRecentPlayback,
+                UseGpuVideoRendering = UseGpuVideoRendering,
             };
             var json = JsonSerializer.Serialize(document, AppSettingsJsonContext.Default.AppSettingsDocument);
             var temporaryPath = _settingsFilePath + ".tmp";
@@ -399,6 +423,8 @@ internal sealed class AppSettingsDocument
     public bool MultiInstance { get; set; } = AppSettingsService.DefaultMultiInstance;
 
     public bool RecordRecentPlayback { get; set; } = AppSettingsService.DefaultRecordRecentPlayback;
+
+    public bool UseGpuVideoRendering { get; set; } = AppSettingsService.DefaultUseGpuVideoRendering;
 }
 
 /// <summary>NativeAOT 友好的设置 JSON 序列化上下文。</summary>
