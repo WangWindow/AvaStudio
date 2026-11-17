@@ -182,9 +182,11 @@ public sealed class MpvRuntime : IAsyncDisposable
             // 视频由应用自己绘制成 Avalonia 内容，不创建原生窗口。
             // OpenGL 路径可以保留硬件解码；软件路径必须使用 CPU 可读帧。
             SetOption(context, "vo", "libmpv");
-            // 软件 render API 需要 CPU 可读帧；OpenGL/ANGLE 路径在本机与
-            // D3D11VA 零拷贝互操作不兼容，硬件解码会拖慢 4K HDR，保持软件解码。
-            SetOption(context, "hwdec", "no");
+            // 软件 render API 需要 CPU 可读帧：auto-copy-safe 自动选择
+            // D3D11VA copy-back 硬件解码，不可用时自动退回软件解码。
+            // OpenGL/ANGLE 路径与 D3D11VA 回传组合在 4K 下会掉帧，
+            // 因此 GPU 渲染模式仍用软件解码，把 CPU 留给色调映射/缩放。
+            SetOption(context, "hwdec", renderOutput.UsesOpenGl ? "no" : "auto-copy-safe");
         }
         else
         {
