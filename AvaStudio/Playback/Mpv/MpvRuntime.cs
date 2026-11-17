@@ -127,66 +127,20 @@ public sealed class MpvRuntime : IAsyncDisposable
 
     private static void Configure(IntPtr context, IVideoOutput? videoOutput)
     {
-        SetOption(context, "idle", "yes");
-        SetOption(context, "keep-open", "yes");
-        SetOption(context, "terminal", "no");
-        SetOption(context, "input-default-bindings", "no");
-        SetOption(context, "osc", "no");
-        SetOption(context, "audio-client-name", "AvaStudio");
-
-        // 当前播放入口都是本地文件。libmpv 默认会为解复用缓存预留上百 MiB，
-        // 并把大量解码帧留在内存里；这里按本地播放收紧缓存和线程数。
-        SetOption(context, "cache", "no");
-        SetOption(context, "demuxer-max-bytes", "16MiB");
-        SetOption(context, "demuxer-max-back-bytes", "4MiB");
-        SetOption(context, "demuxer-readahead-secs", "2");
-        SetOption(context, "cache-secs", "2");
-        // 4K/HEVC 需要更多解码线程；线程数增加的内存占用远小于硬件回传缓冲。
-        SetOption(context, "vd-lavc-threads", "4");
-        SetOption(context, "audio-buffer", "0.2");
-
-        // 软件渲染默认的双线性缩放在高分辨率素材上会明显发软；
-        // zimg/lanczos 只在渲染目标尺寸变化时工作，额外 CPU 开销可控。
-        SetOption(context, "sws-scaler", "lanczos");
-        SetOption(context, "sws-allow-zimg", "yes");
-        SetOption(context, "zimg-scaler", "lanczos");
-        SetOption(context, "zimg-scaler-param-a", "3");
-        SetOption(context, "video-output-levels", "full");
-
-        // HDR/10-bit 素材最终输出到 8-bit SDR 位图：用 BT.2390 色调映射、
-        // 感知色域映射和误差扩散抖动，避免高光裁剪和渐变色带。
-        // 注意：软件 render API 不提供 HDR 直通，HDR 会被映射到 SDR。
-        SetOption(context, "tone-mapping", "bt.2390");
-        SetOption(context, "hdr-compute-peak", "yes");
-        SetOption(context, "gamut-mapping-mode", "perceptual");
-        SetOption(context, "target-prim", "bt.709");
-        SetOption(context, "target-trc", "srgb");
-        SetOption(context, "target-peak", "200");
-        SetOption(context, "dither-depth", "8");
-        SetOption(context, "zimg-dither", "error-diffusion");
-        SetOption(context, "deband", "yes");
-        SetOption(context, "deband-iterations", "2");
-        SetOption(context, "deband-threshold", "48");
-        SetOption(context, "deband-grain", "0");
-
-        // OpenGL render API 使用的 GPU 缩放参数；软件渲染会自动忽略这些选项。
-        SetOption(context, "scale", "ewa_lanczossharp");
-        SetOption(context, "cscale", "ewa_lanczossoft");
-        SetOption(context, "dscale", "mitchell");
-        SetOption(context, "correct-downscaling", "yes");
-        SetOption(context, "linear-downscaling", "yes");
-        SetOption(context, "sigmoid-upscaling", "yes");
+        ConfigureBase(context);
 
         if (videoOutput is IMpvRenderVideoOutput renderOutput)
         {
-            // 视频由应用自己绘制成 Avalonia 内容，不创建原生窗口。
-            // OpenGL 路径可以保留硬件解码；软件路径必须使用 CPU 可读帧。
             SetOption(context, "vo", "libmpv");
-            // 软件 render API 需要 CPU 可读帧：auto-copy-safe 自动选择
-            // D3D11VA copy-back 硬件解码，不可用时自动退回软件解码。
-            // OpenGL/ANGLE 路径与 D3D11VA 回传组合在 4K 下会掉帧，
-            // 因此 GPU 渲染模式仍用软件解码，把 CPU 留给色调映射/缩放。
-            SetOption(context, "hwdec", renderOutput.UsesOpenGl ? "no" : "auto-copy-safe");
+
+            if (renderOutput.UsesOpenGl)
+            {
+                ConfigureGpuRender(context);
+            }
+            else
+            {
+                ConfigureSoftwareRender(context);
+            }
         }
         else
         {
@@ -199,6 +153,96 @@ public sealed class MpvRuntime : IAsyncDisposable
         {
             _ = LibMpv.mpv_request_log_messages(context, "info");
         }
+    }
+
+    /// <summary>
+    /// 嵌入式 libmpv 的通用配置：不读取用户 mpv.conf/脚本，不创建窗口，
+    /// 使用适合单文件播放的保守缓存。
+    /// </summary>
+    private static void ConfigureBase(IntPtr context)
+    {
+        SetOption(context, "config", "no");
+        SetOption(context, "load-scripts", "no");
+        SetOption(context, "ytdl", "no");
+        SetOption(context, "idle", "yes");
+        SetOption(context, "keep-open", "yes");
+        SetOption(context, "force-window", "no");
+        SetOption(context, "terminal", "no");
+        SetOption(context, "input-default-bindings", "no");
+        SetOption(context, "osc", "no");
+        SetOption(context, "audio-client-name", "AvaStudio");
+        SetOption(context, "save-position-on-quit", "no");
+        SetOption(context, "resume-playback", "no");
+
+        // 当前播放入口都是本地文件。默认缓存会预留上百 MiB；
+        // 32/8 MiB 足以覆盖 4K 高码率的几秒预读，同时远低于 mpv 默认值。
+        SetOption(context, "cache", "no");
+        SetOption(context, "demuxer-max-bytes", "32MiB");
+        SetOption(context, "demuxer-max-back-bytes", "8MiB");
+        SetOption(context, "demuxer-readahead-secs", "2");
+        SetOption(context, "cache-secs", "2");
+
+        // 主流 mpv 配置不强制解码线程数；硬解时该值基本不参与，
+        // 软件回退时交给 libmpv 按 CPU/分辨率自动决定。
+        SetOption(context, "vd-lavc-threads", "0");
+        SetOption(context, "audio-buffer", "0.2");
+    }
+
+    /// <summary>
+    /// 软件 render API 配置：需要 CPU 可读帧，使用 D3D11VA copy-back；
+    /// 缩放/抖动由 zimg 完成，输出 full-range RGB 与 Avalonia 位图对齐。
+    /// </summary>
+    private static void ConfigureSoftwareRender(IntPtr context)
+    {
+        SetOption(context, "hwdec", "auto-copy-safe");
+        SetOption(context, "sws-scaler", "lanczos");
+        SetOption(context, "sws-allow-zimg", "yes");
+        SetOption(context, "zimg-scaler", "lanczos");
+        SetOption(context, "zimg-scaler-param-a", "3");
+        SetOption(context, "zimg-dither", "error-diffusion");
+        SetOption(context, "video-output-levels", "full");
+    }
+
+    /// <summary>
+    /// GPU/OpenGL 配置：对齐 mpv 的 high-quality profile（ewa_lanczossharp、
+    /// antiring、deband），并补上 8-bit FBO 的抖动与 HDR→SDR 色调映射。
+    /// </summary>
+    private static void ConfigureGpuRender(IntPtr context)
+    {
+        // 本机 ANGLE/OpenGL 与 D3D11VA copy-back 在 4K 下会掉帧；
+        // GPU 渲染模式保持软件解码，把 CPU 留给色调映射和缩放。
+        SetOption(context, "hwdec", "no");
+
+        SetOption(context, "scale", "ewa_lanczossharp");
+        SetOption(context, "cscale", "ewa_lanczossharp");
+        SetOption(context, "dscale", "mitchell");
+        SetOption(context, "scale-antiring", "0.6");
+        SetOption(context, "cscale-antiring", "0.6");
+        SetOption(context, "correct-downscaling", "yes");
+        SetOption(context, "linear-downscaling", "yes");
+        SetOption(context, "sigmoid-upscaling", "yes");
+
+        SetOption(context, "deband", "yes");
+        SetOption(context, "deband-iterations", "2");
+        SetOption(context, "deband-threshold", "48");
+        SetOption(context, "deband-range", "16");
+        SetOption(context, "deband-grain", "0");
+
+        SetOption(context, "dither", "error-diffusion");
+        SetOption(context, "error-diffusion", "sierra-lite");
+        SetOption(context, "dither-depth", "8");
+
+        // Avalonia FBO 是 8-bit SDR，不做 HDR 直通；HDR 内容映射到 SDR。
+        SetOption(context, "tone-mapping", "bt.2390");
+        SetOption(context, "hdr-compute-peak", "yes");
+        SetOption(context, "hdr-peak-percentile", "99.995");
+        SetOption(context, "hdr-contrast-recovery", "0.30");
+        SetOption(context, "gamut-mapping-mode", "perceptual");
+        SetOption(context, "target-prim", "bt.709");
+        SetOption(context, "target-trc", "srgb");
+        SetOption(context, "target-peak", "auto");
+        SetOption(context, "target-colorspace-hint", "no");
+        SetOption(context, "video-output-levels", "full");
     }
 
     private static void SetOption(IntPtr context, string name, string value)
