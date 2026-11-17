@@ -17,6 +17,6 @@
   ExtendClientAreaToDecorationsHint="True"
   WindowDecorations="None"
   Background="Transparent"
-  TransparencyBackgroundFallback="{DynamicResource SystemControlBackgroundAltHighBrush}">
+  TransparencyBackgroundFallback="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
   <views:MainView />
 </Window>

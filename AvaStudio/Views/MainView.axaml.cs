@@ -50,6 +50,7 @@ public partial class MainView : UserControl
     private Window? _window;
     private IVideoOutput? _videoOutput;
     private bool? _videoStageApplied;
+    private bool _playerControlsInShell;
 
     /// <summary>独立播放页的系统全屏状态；直接以窗口状态为准，避免额外布尔状态失同步。</summary>
     private bool IsPlayerFullScreen =>
@@ -123,7 +124,7 @@ public partial class MainView : UserControl
             if (_window is null)
             {
                 MainRoot.Classes.Set("desktop", false);
-                MainRoot.Classes.Set("mica", false);
+                MainRoot.Classes.Set("acrylic", false);
                 MainRoot.Classes.Set("window-inactive", false);
             }
 
@@ -184,10 +185,19 @@ public partial class MainView : UserControl
             return;
         }
 
-        var output = VideoOutputFactory.Create(_viewModel?.UseGpuVideoRendering == true);
+        var output = VideoOutputFactory.Create(
+            _viewModel?.UseGpuVideoRendering == true,
+            _viewModel?.UseNativeVideoRendering == true);
         _videoOutput = output;
         output.Surface.HorizontalAlignment = HorizontalAlignment.Stretch;
         output.Surface.VerticalAlignment = VerticalAlignment.Stretch;
+        if (output is INativeVideoOutput nativeOutput)
+        {
+            nativeOutput.SurfaceClicked += OnNativeSurfaceClicked;
+            nativeOutput.SurfaceDoubleClicked += OnNativeSurfaceDoubleClicked;
+            nativeOutput.SurfacePointerMoved += OnNativeSurfacePointerMoved;
+        }
+
         VideoHost.Content = output.Surface;
         _viewModel?.AttachVideoOutput(output);
     }
@@ -208,6 +218,13 @@ public partial class MainView : UserControl
 
         var output = _videoOutput;
         _videoOutput = null;
+        if (output is INativeVideoOutput nativeOutput)
+        {
+            nativeOutput.SurfaceClicked -= OnNativeSurfaceClicked;
+            nativeOutput.SurfaceDoubleClicked -= OnNativeSurfaceDoubleClicked;
+            nativeOutput.SurfacePointerMoved -= OnNativeSurfacePointerMoved;
+        }
+
         output.Dispose();
         if (ReferenceEquals(VideoHost.Content, output.Surface))
         {
@@ -250,6 +267,45 @@ public partial class MainView : UserControl
             VideoHost.VerticalAlignment = VerticalAlignment.Bottom;
             VideoHost.IsHitTestVisible = false;
         }
+
+        UpdatePlayerControlsHostPlacement();
+    }
+
+    /// <summary>
+    /// 原生视频子窗口永远在 Avalonia 内容之上；此时把播放控制条移到 ShellGrid
+    /// 底部独立行，避免被 airspace 遮住。渲染 API 模式仍保留底部覆盖。
+    /// </summary>
+    private void UpdatePlayerControlsHostPlacement()
+    {
+        var useShell = _videoOutput is INativeVideoOutput
+            && _viewModel?.IsImmersiveOpen == true
+            && _viewModel?.IsVideoStageVisible == true;
+        if (useShell == _playerControlsInShell)
+        {
+            return;
+        }
+
+        if (PlayerControlsHost.Parent is Panel currentParent)
+        {
+            currentParent.Children.Remove(PlayerControlsHost);
+        }
+
+        if (useShell)
+        {
+            Grid.SetRow(PlayerControlsHost, 2);
+            PlayerControlsHost.VerticalAlignment = VerticalAlignment.Stretch;
+            PlayerControlsHost.ZIndex = 1;
+            ShellGrid.Children.Add(PlayerControlsHost);
+        }
+        else
+        {
+            Grid.SetRow(PlayerControlsHost, 0);
+            PlayerControlsHost.VerticalAlignment = VerticalAlignment.Bottom;
+            PlayerControlsHost.ZIndex = 5;
+            ContentHost.Children.Add(PlayerControlsHost);
+        }
+
+        _playerControlsInShell = useShell;
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -265,7 +321,7 @@ public partial class MainView : UserControl
         CloseButton.IsVisible = false;
         TitleBarDragRegion.IsVisible = false;
         MainRoot.Classes.Set("desktop", false);
-        MainRoot.Classes.Set("mica", false);
+        MainRoot.Classes.Set("acrylic", false);
 
         _viewModel?.AttachTopLevel(null);
         base.OnDetachedFromVisualTree(e);
@@ -324,10 +380,16 @@ public partial class MainView : UserControl
         MainRoot.Classes.Set("window-inactive", true);
     }
 
+    /// <summary>
+    /// 仅在系统实际提供 Acrylic/Blur 时让外壳半透明；不支持材质时保持不透明 Fluent 兜底，
+    /// 避免透明窗口导致文字不可读。
+    /// </summary>
     private void UpdateWindowMaterialClasses()
     {
-        var isMica = _window?.ActualTransparencyLevel == WindowTransparencyLevel.Mica;
-        MainRoot.Classes.Set("mica", isMica);
+        var level = _window?.ActualTransparencyLevel;
+        var isAcrylic = level == WindowTransparencyLevel.AcrylicBlur
+            || level == WindowTransparencyLevel.Blur;
+        MainRoot.Classes.Set("acrylic", isAcrylic);
         MainRoot.Classes.Set("window-inactive", _window?.IsActive == false);
     }
 
@@ -442,6 +504,13 @@ public partial class MainView : UserControl
     /// </summary>
     private void OnImmersiveSurfacePointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        if (_videoOutput is INativeVideoOutput)
+        {
+            // 原生视频子窗口的手势由 Win32 WndProc 处理，避免 Avalonia
+            // 又收到一次指针事件导致单击/双击重复触发。
+            return;
+        }
+
         if (_viewModel?.IsImmersiveOpen != true || IsWithinPlayerControls(e.Source as Visual))
         {
             return;
@@ -481,6 +550,39 @@ public partial class MainView : UserControl
 
         _immersiveClickPending = false;
         _viewModel.PlayerBar.TogglePlayPauseCommand.Execute(null);
+        ShowPlayerControls();
+    }
+
+    /// <summary>原生视频表面的单击：切换播放/暂停；只在独立视频播放页生效。</summary>
+    private void OnNativeSurfaceClicked(object? sender, EventArgs e)
+    {
+        if (_viewModel?.IsImmersiveOpen != true || _viewModel.PlayerBar.IsVideo != true)
+        {
+            return;
+        }
+
+        _viewModel.PlayerBar.TogglePlayPauseCommand.Execute(null);
+        ShowPlayerControls();
+    }
+
+    /// <summary>原生视频表面的鼠标移动：唤醒自动隐藏的控制条。</summary>
+    private void OnNativeSurfacePointerMoved(object? sender, EventArgs e)
+    {
+        if (_viewModel?.IsImmersiveOpen == true)
+        {
+            ShowPlayerControls();
+        }
+    }
+
+    /// <summary>原生视频表面的双击：切换系统全屏。</summary>
+    private void OnNativeSurfaceDoubleClicked(object? sender, EventArgs e)
+    {
+        if (_viewModel?.IsImmersiveOpen != true || _viewModel.PlayerBar.IsVideo != true)
+        {
+            return;
+        }
+
+        TogglePlayerFullscreen();
         ShowPlayerControls();
     }
 
@@ -718,6 +820,7 @@ public partial class MainView : UserControl
         }
 
         UpdateVideoStage();
+        UpdatePlayerControlsHostPlacement();
     }
 
     /// <summary>
@@ -728,9 +831,11 @@ public partial class MainView : UserControl
     {
         var isImmersive = _viewModel?.IsImmersiveOpen == true;
         var isPlayerFullscreen = IsPlayerFullScreen;
+        var isNativeSurface = _videoOutput is INativeVideoOutput;
         var isVideoOverlay = isImmersive
             && _viewModel?.IsImmersiveVideo == true
-            && !isPlayerFullscreen;
+            && !isPlayerFullscreen
+            && !isNativeSurface;
 
         TitleBarStrip.IsVisible = !isPlayerFullscreen;
         TitleBarStrip.ZIndex = isVideoOverlay ? 6 : 3;
@@ -1118,17 +1223,6 @@ public partial class MainView : UserControl
         MainRoot.Classes.Set("nav-open", isOpen);
         UpdateNavigationToggleLabels();
         UpdateShellClasses();
-
-        if (isOpen)
-        {
-            Dispatcher.UIThread.Post(
-                () =>
-                {
-                    SearchBox.Focus();
-                    SearchBox.SelectAll();
-                },
-                DispatcherPriority.Input);
-        }
     }
 
     /// <summary>展开模式把面板收成 48 窄栏；其它模式忽略。</summary>
@@ -1176,25 +1270,14 @@ public partial class MainView : UserControl
             _ => _isNavigationOverlayOpen ? "关闭导航菜单" : "打开导航菜单",
         };
 
-        // 面板按钮的读屏名称保持动作中立的固定文案，当前动作用 tooltip 说明。
-        AutomationProperties.SetName(PaneToggleButton, "打开或关闭导航菜单");
-        ToolTip.SetTip(PaneToggleButton, $"{paneLabel}（Ctrl+E）");
-
-        var titleLabel = _isNavigationOverlayOpen ? "关闭导航菜单" : "打开导航菜单";
-        AutomationProperties.SetName(NavToggleButton, titleLabel);
-        ToolTip.SetTip(NavToggleButton, $"{titleLabel}（Ctrl+E）");
+        // 顶部栏只有一个导航按钮：读屏名称保持动作中立，当前动作由 tooltip 说明。
+        AutomationProperties.SetName(NavToggleButton, "打开或关闭导航菜单");
+        ToolTip.SetTip(NavToggleButton, $"{paneLabel}（Ctrl+E）");
     }
 
     private void FocusNavigationToggle()
     {
-        if (_layoutMode == "narrow")
-        {
-            NavToggleButton.Focus();
-        }
-        else
-        {
-            PaneToggleButton.Focus();
-        }
+        NavToggleButton.Focus();
     }
 
     private void OnPaneToggleClick(object? sender, RoutedEventArgs e)
@@ -1202,20 +1285,15 @@ public partial class MainView : UserControl
         TogglePane();
     }
 
-    private void OnNavigationToggleClick(object? sender, RoutedEventArgs e)
+    private void OnNavigationScrimPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        SetNavigationOverlay(!_isNavigationOverlayOpen);
-    }
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
 
-    private void OnNavigationScrimClick(object? sender, RoutedEventArgs e)
-    {
         SetNavigationOverlay(false);
-    }
-
-    /// <summary>窄栏搜索按钮：展开面板/抽屉后聚焦搜索框。</summary>
-    private void OnCompactSearchClick(object? sender, RoutedEventArgs e)
-    {
-        FocusSearch();
+        e.Handled = true;
     }
 
     private void OnSearchBoxKeyDown(object? sender, KeyEventArgs e)
@@ -1262,7 +1340,7 @@ public partial class MainView : UserControl
 
     private void OnMainViewKeyDown(object? sender, KeyEventArgs e)
     {
-        // Alt+← 与标题栏返回按钮一致；浮层打开时先让 Esc 处理抽屉。
+        // Alt+← 保留返回上一页；浮层打开时先让 Esc 处理抽屉。
         if (e.Key == Key.Left && e.KeyModifiers == KeyModifiers.Alt)
         {
             if (!_isNavigationOverlayOpen && _viewModel?.CanGoBack == true)
@@ -1328,22 +1406,19 @@ public partial class MainView : UserControl
 
     private void FocusSearch()
     {
-        // 沉浸播放隐藏了导航面板，Ctrl+F 不强行退出沉浸。
+        // 沉浸播放隐藏了标题栏搜索，Ctrl+F 不强行退出沉浸。
         if (_viewModel?.IsImmersiveOpen == true)
         {
             return;
         }
 
-        // 紧凑/窄屏先打开搜索所在的导航抽屉；展开模式折叠时先恢复面板。
-        if (_layoutMode == "expanded" && _isPaneCollapsed)
+        // 覆盖抽屉打开时搜索被隐藏；Ctrl+F 先关闭抽屉，再把焦点交还标题栏搜索。
+        if (_isNavigationOverlayOpen)
         {
-            SetPaneCollapsed(false);
-        }
-        else if (_layoutMode is "compact" or "narrow")
-        {
-            SetNavigationOverlay(true);
+            SetNavigationOverlay(false);
         }
 
+        // 下一轮输入时再聚焦，避免与按键处理抢焦点。
         Dispatcher.UIThread.Post(
             () =>
             {

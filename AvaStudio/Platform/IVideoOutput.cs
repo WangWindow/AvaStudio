@@ -28,6 +28,28 @@ public interface IVideoOutput : IDisposable
 }
 
 /// <summary>
+/// 原生窗口视频输出：libmpv 通过 <c>wid</c> 直接向平台子窗口渲染，
+/// 视频帧不经过 Avalonia 纹理，适合需要零拷贝/低内存的 Windows 模式。
+/// </summary>
+public interface INativeVideoOutput : IVideoOutput
+{
+    /// <summary>传给 libmpv 的原生窗口句柄；0 表示尚未创建。</summary>
+    long WindowId { get; }
+
+    /// <summary>原生子窗口创建完成。</summary>
+    event EventHandler? HandleCreated;
+
+    /// <summary>原生视频画面单击；点击事件来自原生子窗口，已在 UI 线程。</summary>
+    event EventHandler? SurfaceClicked;
+
+    /// <summary>原生视频画面双击。</summary>
+    event EventHandler? SurfaceDoubleClicked;
+
+    /// <summary>原生视频画面鼠标移动；用于唤醒自动隐藏的播放控制条。</summary>
+    event EventHandler? SurfacePointerMoved;
+}
+
+/// <summary>
 /// 通过 libmpv render API 自行绘制视频帧的输出表面。播放层在 <c>mpv_initialize</c> 之后
 /// 调用 <see cref="AttachMpvContext"/>，在销毁 mpv 核心之前调用 <see cref="ReleaseMpvContextAsync"/>。
 /// </summary>

@@ -16,5 +16,4 @@
     <FluentTheme />
     <StyleInclude Source="avares://AvaStudio/Styles/AppFoundation.axaml" />
   </Application.Styles>
-
 </Application>

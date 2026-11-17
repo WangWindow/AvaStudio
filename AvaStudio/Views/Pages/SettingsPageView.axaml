@@ -14,13 +14,11 @@
   </UserControl.Styles>
 
   <Grid RowDefinitions="Auto,*">
-    <!-- 页头：Windows 11 Settings 的大标题 + 简短说明。 -->
+    <!-- 页头：Windows 11 Settings 风格的大标题。 -->
     <StackPanel x:Name="SettingsHeader"
       Grid.Row="0"
-      Margin="40,28,40,0"
-      Spacing="4">
+      Margin="40,28,40,0">
       <TextBlock Classes="settings-title" Text="设置" />
-      <TextBlock Classes="page-subtitle" Text="管理资料库、播放行为和界面偏好。" />
     </StackPanel>
 
     <ScrollViewer Grid.Row="1"
@@ -35,38 +33,6 @@
         <TextBlock Classes="settings-section" Text="库" />
 
         <StackPanel Spacing="8" Margin="0,10,0,0">
-          <!-- 资料库状态：统计、扫描状态与进度。 -->
-          <Border Classes="settings-row">
-            <Grid ColumnDefinitions="Auto,*,Auto" Margin="20,0" MinHeight="80">
-              <Border Classes="settings-icon">
-                <fi:SymbolIcon Symbol="Info"
-                  FontSize="20"
-                  Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                  HorizontalAlignment="Center"
-                  VerticalAlignment="Center" />
-              </Border>
-
-              <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center" Spacing="3">
-                <TextBlock Classes="settings-row-title" Text="资料库状态" />
-                <TextBlock Classes="settings-row-description" Text="{Binding LibrarySummary}" />
-                <ProgressBar Classes="scan-progress"
-                  Margin="0,7,0,0"
-                  Minimum="0"
-                  Maximum="1"
-                  Value="{Binding ScanProgress}"
-                  IsVisible="{Binding IsScanning}" />
-              </StackPanel>
-
-              <Border Grid.Column="2"
-                Classes="settings-value"
-                ToolTip.Tip="{Binding ScanStatusText}">
-                <TextBlock Classes="settings-value-text"
-                  Text="{Binding ScanStatusText}"
-                  TextTrimming="CharacterEllipsis" />
-              </Border>
-            </Grid>
-          </Border>
-
           <!-- 音乐资料库位置：可展开查看并移除。 -->
           <Border Classes="settings-row">
             <StackPanel>
@@ -311,6 +277,32 @@
                 VerticalAlignment="Center"
                 AutomationProperties.Name="GPU 视频渲染"
                 ToolTip.Tip="HDR/高画质模式，内存占用更高；修改后下次启动生效" />
+            </Grid>
+          </Border>
+
+          <Border Classes="settings-row">
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="20,0" MinHeight="80">
+              <Border Classes="settings-icon">
+                <fi:SymbolIcon Symbol="Video"
+                  FontSize="20"
+                  Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center" />
+              </Border>
+
+              <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center" Spacing="3">
+                <TextBlock Classes="settings-row-title" Text="原生视频输出（Windows 零拷贝）" />
+                <TextBlock Classes="settings-row-description"
+                  Text="libmpv 直接渲染到原生子窗口，支持 D3D11VA 硬件解码零拷贝，CPU 和内存占用更低；播放页标题栏改为实体，不能用 Avalonia 控件覆盖视频。修改后下次启动生效。" />
+              </StackPanel>
+
+              <ToggleSwitch Grid.Column="2"
+                IsChecked="{Binding UseNativeVideoRendering, Mode=TwoWay}"
+                OnContent="开"
+                OffContent="关"
+                VerticalAlignment="Center"
+                AutomationProperties.Name="原生视频输出"
+                ToolTip.Tip="零拷贝原生输出；重启生效" />
             </Grid>
           </Border>
 

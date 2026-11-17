@@ -17,11 +17,21 @@ public static class VideoOutputFactory
     /// Windows 下为 true 时使用 OpenGL/ANGLE：支持 HDR 色调映射和 GPU 缩放，
     /// 但 4K 视频私有内存明显更高。Linux 仍按原有环境变量选择 OpenGL。
     /// </param>
-    public static IVideoOutput Create(bool useGpuVideoRendering = false)
+    /// <param name="useNativeVideoRendering">
+    /// Windows 下为 true 时使用原生子窗口 + libmpv <c>wid</c>，零拷贝、低 CPU/内存；
+    /// 播放页标题栏变为实体，Avalonia 控件不能覆盖视频。
+    /// </param>
+    public static IVideoOutput Create(
+        bool useGpuVideoRendering = false,
+        bool useNativeVideoRendering = false)
     {
 #if WINDOWS
-        // 默认软件 render API：视频是普通 Avalonia 内容，不创建原生子窗口。
-        // GPU 模式由设置页显式开启（HDR/高画质），避免默认占用过高内存。
+        // 原生零拷贝优先；否则软件 render API；GPU 模式用于 HDR/高画质。
+        if (useNativeVideoRendering)
+        {
+            return new WindowsNativeVideoOutput();
+        }
+
         return useGpuVideoRendering ? new WindowsOpenGlVideoOutput() : new SoftwareVideoOutput();
 #elif LINUX
         var software = string.Equals(

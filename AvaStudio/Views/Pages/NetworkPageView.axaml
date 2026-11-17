@@ -15,9 +15,8 @@
 
   <Grid RowDefinitions="Auto,*">
     <Grid Grid.Row="0" Margin="40,24,40,0" RowDefinitions="Auto,Auto">
-      <StackPanel Spacing="4">
-        <TextBlock Classes="page-title" Text="媒体服务器" />
-        <TextBlock Classes="page-subtitle" Text="浏览网络中的媒体设备。" />
+      <StackPanel>
+        <TextBlock Classes="page-title" Text="{Binding Title}" />
       </StackPanel>
       <Border Grid.Row="1" Classes="divider" Margin="0,16,0,0" />
     </Grid>

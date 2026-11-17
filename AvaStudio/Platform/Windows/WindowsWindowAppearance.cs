@@ -35,8 +35,13 @@ internal static partial class WindowsWindowAppearance
 
     public static void Apply(Window window)
     {
-        // 请求原生 Mica 材质；平台不支持时 Avalonia 使用 TransparencyBackgroundFallback。
-        window.TransparencyLevelHint = [WindowTransparencyLevel.Mica];
+        // 优先请求 Windows 原生 Acrylic 材质；不支持时退回 Blur，最终由
+        // MainWindow 的 TransparencyBackgroundFallback 提供不透明兜底。
+        window.TransparencyLevelHint =
+        [
+            WindowTransparencyLevel.AcrylicBlur,
+            WindowTransparencyLevel.Blur,
+        ];
 
         // 官方 Avalonia 附加属性；Windows 11 22000+ 生效，旧系统忽略。
         Win32Properties.SetWindowCornerPreference(window, Win32Properties.WindowCornerPreference.Round);

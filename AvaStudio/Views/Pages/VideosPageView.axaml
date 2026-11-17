@@ -106,16 +106,6 @@
     <Grid Grid.Row="1" Margin="40,14,40,0" ColumnDefinitions="Auto,*,Auto" MinHeight="32">
       <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center"
         IsVisible="{Binding IsFolderListVisible}">
-        <Button Classes="icon-tool"
-          Width="28"
-          Height="28"
-          IsVisible="{Binding IsFolderOpen}"
-          Command="{Binding BackToFoldersCommand}"
-          AutomationProperties.Name="返回上级文件夹"
-          ToolTip.Tip="返回上级文件夹">
-          <fi:SymbolIcon Symbol="ChevronLeft" FontSize="14" />
-        </Button>
-
         <ItemsControl ItemsSource="{Binding Breadcrumbs}"
           VerticalAlignment="Center"
           IsVisible="{Binding HasBreadcrumbs}">

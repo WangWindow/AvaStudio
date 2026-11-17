@@ -286,7 +286,7 @@
                             <StackPanel>
                               <Grid Width="176" Height="176">
                                 <Border Width="176" Height="176" CornerRadius="88" ClipToBounds="True"
-                                  Background="{DynamicResource SystemControlBackgroundListLowBrush}">
+                                  Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
                                   <Grid>
                                     <fi:SymbolIcon Symbol="People"
                                       FontSize="36"

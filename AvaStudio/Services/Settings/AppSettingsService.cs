@@ -42,6 +42,9 @@ public sealed class AppSettingsService
     /// <summary>默认使用软件视频渲染；GPU 渲染用于 HDR/高画质，内存占用更高。</summary>
     public const bool DefaultUseGpuVideoRendering = false;
 
+    /// <summary>默认不用原生窗口输出；Windows 下可开启零拷贝低开销路径。</summary>
+    public const bool DefaultUseNativeVideoRendering = false;
+
     private readonly string _settingsFilePath;
 
     public AppSettingsService()
@@ -64,6 +67,7 @@ public sealed class AppSettingsService
             MultiInstance = DefaultMultiInstance;
             RecordRecentPlayback = DefaultRecordRecentPlayback;
             UseGpuVideoRendering = DefaultUseGpuVideoRendering;
+            UseNativeVideoRendering = DefaultUseNativeVideoRendering;
         }
 
     }
@@ -106,6 +110,12 @@ public sealed class AppSettingsService
     /// 但 4K 视频的私有内存会明显上升。修改后下次启动生效。
     /// </summary>
     public bool UseGpuVideoRendering { get; private set; } = DefaultUseGpuVideoRendering;
+
+    /// <summary>
+    /// Windows 原生视频输出：libmpv 直接渲染到原生子窗口，零拷贝、低 CPU/内存；
+    /// 播放页标题栏会改为实体，不能用 Avalonia 控件覆盖视频。修改后下次启动生效。
+    /// </summary>
+    public bool UseNativeVideoRendering { get; private set; } = DefaultUseNativeVideoRendering;
 
     /// <summary>任何设置发生变化时触发；事件在 UI 线程触发。</summary>
     public event EventHandler? Changed;
@@ -180,6 +190,18 @@ public sealed class AppSettingsService
         }
 
         UseGpuVideoRendering = useGpuVideoRendering;
+        SaveAndNotify();
+    }
+
+    /// <summary>更新是否使用 Windows 原生零拷贝视频输出；下次启动生效。</summary>
+    public void SetUseNativeVideoRendering(bool useNativeVideoRendering)
+    {
+        if (UseNativeVideoRendering == useNativeVideoRendering)
+        {
+            return;
+        }
+
+        UseNativeVideoRendering = useNativeVideoRendering;
         SaveAndNotify();
     }
 
@@ -308,6 +330,7 @@ public sealed class AppSettingsService
             MultiInstance = document.MultiInstance;
             RecordRecentPlayback = document.RecordRecentPlayback;
             UseGpuVideoRendering = document.UseGpuVideoRendering;
+            UseNativeVideoRendering = document.UseNativeVideoRendering;
             return true;
         }
         catch (Exception exception) when (
@@ -335,6 +358,7 @@ public sealed class AppSettingsService
                 MultiInstance = MultiInstance,
                 RecordRecentPlayback = RecordRecentPlayback,
                 UseGpuVideoRendering = UseGpuVideoRendering,
+                UseNativeVideoRendering = UseNativeVideoRendering,
             };
             var json = JsonSerializer.Serialize(document, AppSettingsJsonContext.Default.AppSettingsDocument);
             var temporaryPath = _settingsFilePath + ".tmp";
@@ -425,6 +449,8 @@ internal sealed class AppSettingsDocument
     public bool RecordRecentPlayback { get; set; } = AppSettingsService.DefaultRecordRecentPlayback;
 
     public bool UseGpuVideoRendering { get; set; } = AppSettingsService.DefaultUseGpuVideoRendering;
+
+    public bool UseNativeVideoRendering { get; set; } = AppSettingsService.DefaultUseNativeVideoRendering;
 }
 
 /// <summary>NativeAOT 友好的设置 JSON 序列化上下文。</summary>

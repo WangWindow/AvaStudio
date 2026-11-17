@@ -89,11 +89,6 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
     /// <summary>是否显示当前文件夹的子文件夹区域。</summary>
     public bool IsFolderListVisible => SelectedSection == VideoSection.Folders && _currentFolder is not null;
 
-    /// <summary>是否位于资料库根目录之外的子文件夹，用于显示返回按钮。</summary>
-    public bool IsFolderOpen => SelectedSection == VideoSection.Folders
-        && _currentFolder is not null
-        && !IsLibraryRoot(_currentFolder.Path);
-
     /// <summary>是否选中文件夹分区。</summary>
     public bool IsFoldersSelected => SelectedSection == VideoSection.Folders;
 
@@ -148,15 +143,8 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
     /// <summary>当前文件夹的子文件夹数量文本。</summary>
     public string FolderCountText => $"{Folders.Count} 个文件夹";
 
-    /// <summary>当前文件夹标题；资料库根目录显示统一的“视频”。</summary>
-    public string FolderHeading => _currentFolder is null || IsLibraryRoot(_currentFolder.Path)
-        ? "视频"
-        : _currentFolder.Name;
-
-    /// <summary>页面大标题：文件夹分区显示当前目录名，全部视频分区显示分区名。</summary>
-    public string PageHeading => SelectedSection == VideoSection.AllVideos
-        ? "所有视频"
-        : FolderHeading;
+    /// <summary>页面大标题始终显示“视频”；当前目录由路径导航表达。</summary>
+    public string PageHeading => "视频";
 
     partial void OnSelectedSectionChanged(VideoSection value)
     {
@@ -205,22 +193,6 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
     {
         SelectedSection = VideoSection.Folders;
         SetCurrentFolder(folder.Node);
-    }
-
-    /// <summary>返回上一级目录；根目录没有返回动作。</summary>
-    [RelayCommand]
-    private void BackToFolders()
-    {
-        if (_currentFolder?.ParentPath is not { } parentPath)
-        {
-            return;
-        }
-
-        var parent = FindNode(_services.Library.Snapshot.VideoRoots, parentPath);
-        if (parent is not null)
-        {
-            SetCurrentFolder(parent);
-        }
     }
 
     /// <summary>点击路径导航中的一节，直接跳到该目录。</summary>
@@ -436,7 +408,6 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
     private void RaiseViewProperties()
     {
         OnPropertyChanged(nameof(IsFolderListVisible));
-        OnPropertyChanged(nameof(IsFolderOpen));
         OnPropertyChanged(nameof(IsFoldersSelected));
         OnPropertyChanged(nameof(IsAllVideosSelected));
         OnPropertyChanged(nameof(HasFolders));
@@ -449,8 +420,6 @@ public sealed partial class VideosPageViewModel : PageViewModelBase
         OnPropertyChanged(nameof(SectionSymbol));
         OnPropertyChanged(nameof(VideoCountText));
         OnPropertyChanged(nameof(FolderCountText));
-        OnPropertyChanged(nameof(FolderHeading));
-        OnPropertyChanged(nameof(PageHeading));
         OnPropertyChanged(nameof(VideoLocationCount));
         OnPropertyChanged(nameof(HasLibraryLocations));
     }

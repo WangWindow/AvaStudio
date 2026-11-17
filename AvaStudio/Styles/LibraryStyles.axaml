@@ -88,7 +88,7 @@
     <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
   </Style>
 
-  <!-- 歌曲行交替底色；悬停用更深一档，避免和偶数行混淆。 -->
+  <!-- 歌曲行交替底色；悬停用更高一档，避免和偶数行混淆。 -->
   <Style Selector="Button.song-row.alternate">
     <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
   </Style>
@@ -100,20 +100,20 @@
   <!-- 封面占位与裁剪。 -->
   <Style Selector="Border.artwork-frame">
     <Setter Property="CornerRadius" Value="6" />
-    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
     <Setter Property="ClipToBounds" Value="True" />
   </Style>
 
-  <!-- 视频文件夹没有封面，使用更深的 Screenbox 表面，避免和内容底色混在一起。 -->
+  <!-- 视频文件夹没有封面，用比封面占位更高一档的表面与内容底色区分。 -->
   <Style Selector="Border.folder-artwork">
-    <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
   </Style>
 
   <Style Selector="Border.detail-cover">
     <Setter Property="Width" Value="192" />
     <Setter Property="Height" Value="192" />
     <Setter Property="CornerRadius" Value="8" />
-    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
     <Setter Property="ClipToBounds" Value="True" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -122,7 +122,7 @@
     <Setter Property="Width" Value="192" />
     <Setter Property="Height" Value="192" />
     <Setter Property="CornerRadius" Value="96" />
-    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
     <Setter Property="ClipToBounds" Value="True" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>

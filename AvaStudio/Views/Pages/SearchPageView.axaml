@@ -15,7 +15,7 @@
     <StyleInclude Source="avares://AvaStudio/Styles/ListStyles.axaml" />
   </UserControl.Styles>
 
-  <Grid RowDefinitions="Auto,Auto,*">
+  <Grid RowDefinitions="Auto,*">
     <!-- 页头：标题会带上当前查询，右侧保留资料库设置入口。 -->
     <Grid Grid.Row="0" Margin="40,24,40,0" RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
       <TextBlock Classes="page-title"
@@ -39,40 +39,8 @@
       <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="divider" Margin="0,16,0,0" />
     </Grid>
 
-    <!-- 搜索框：用相同命令清空查询，输入即更新结果。 -->
-    <Grid Grid.Row="1" Margin="40,14,40,0">
-      <TextBox x:Name="SearchInput"
-        Text="{Binding Query, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-        PlaceholderText="搜索资料库和播放队列"
-        Height="34"
-        FontSize="13"
-        Padding="32,0,40,0"
-        VerticalContentAlignment="Center"
-        AutomationProperties.Name="搜索"
-        ToolTip.Tip="输入标题、艺术家或专辑名称" />
-      <fi:SymbolIcon Symbol="Search"
-        FontSize="15"
-        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-        HorizontalAlignment="Left"
-        VerticalAlignment="Center"
-        Margin="10,0,0,0"
-        IsHitTestVisible="False" />
-      <Button Classes="icon-tool"
-        Width="28"
-        Height="28"
-        HorizontalAlignment="Right"
-        VerticalAlignment="Center"
-        Margin="0,0,3,0"
-        IsVisible="{Binding HasQuery}"
-        Command="{Binding ClearQueryCommand}"
-        AutomationProperties.Name="清除搜索"
-        ToolTip.Tip="清除搜索">
-        <fi:SymbolIcon Symbol="Dismiss" FontSize="12" />
-      </Button>
-    </Grid>
-
-    <!-- 初始提示：横向空状态，操作指向资料库设置。 -->
-    <controls:EmptyStateView Grid.Row="2"
+    <!-- 初始提示：横向空状态，操作指向资料库设置。搜索输入统一在窗口标题栏。 -->
+    <controls:EmptyStateView Grid.Row="1"
       IsVisible="{Binding IsPromptVisible}"
       Margin="40,0,40,32"
       MaxWidth="640"
@@ -88,7 +56,7 @@
       ShowSecondary="False" />
 
     <!-- 无结果：说明真实的搜索范围，并提供清除/设置入口。 -->
-    <controls:EmptyStateView Grid.Row="2"
+    <controls:EmptyStateView Grid.Row="1"
       IsVisible="{Binding IsNoResultsVisible}"
       Margin="40,0,40,32"
       MaxWidth="640"
@@ -107,7 +75,7 @@
       ShowSecondary="True" />
 
     <!-- 结果：行本身可播放，末尾播放图标与行按钮是同一个点击区域。 -->
-    <Grid Grid.Row="2" IsVisible="{Binding HasResults}" RowDefinitions="Auto,*" Margin="40,18,40,0">
+    <Grid Grid.Row="1" IsVisible="{Binding HasResults}" RowDefinitions="Auto,*" Margin="40,24,40,0">
       <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,6">
         <TextBlock Classes="section-label" Text="搜索结果" VerticalAlignment="Center" />
         <TextBlock Grid.Column="1" Text="{Binding ResultSummary}" Classes="tertiary" VerticalAlignment="Center" />

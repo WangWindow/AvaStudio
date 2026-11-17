@@ -59,11 +59,15 @@ public sealed partial class SettingsPageViewModel : PageViewModelBase
     [ObservableProperty]
     public partial bool UseGpuVideoRendering { get; set; }
 
+    /// <summary>是否使用 Windows 原生零拷贝视频输出；修改后下次启动生效。</summary>
+    [ObservableProperty]
+    public partial bool UseNativeVideoRendering { get; set; }
+
     /// <summary>应用版本号。</summary>
     public string AppVersion => typeof(SettingsPageViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
 
-    /// <summary>关于卡片的副标题：版本与资料库统计。</summary>
-    public string AboutSummary => $"版本 {AppVersion} · {LibrarySummary}";
+    /// <summary>关于卡片的副标题：仅显示应用版本。</summary>
+    public string AboutSummary => $"版本 {AppVersion}";
 
     /// <summary>音乐资料库位置。</summary>
     public ObservableCollection<LibraryLocationItemViewModel> MusicLocations { get; } = [];
@@ -190,6 +194,11 @@ public sealed partial class SettingsPageViewModel : PageViewModelBase
         _services.Settings.SetUseGpuVideoRendering(value);
     }
 
+    partial void OnUseNativeVideoRenderingChanged(bool value)
+    {
+        _services.Settings.SetUseNativeVideoRendering(value);
+    }
+
     /// <summary>把设置文件中的值同步到界面属性，避免外部修改后控件显示旧值。</summary>
     private void SyncSettingValues()
     {
@@ -211,6 +220,11 @@ public sealed partial class SettingsPageViewModel : PageViewModelBase
         if (UseGpuVideoRendering != _services.Settings.UseGpuVideoRendering)
         {
             UseGpuVideoRendering = _services.Settings.UseGpuVideoRendering;
+        }
+
+        if (UseNativeVideoRendering != _services.Settings.UseNativeVideoRendering)
+        {
+            UseNativeVideoRendering = _services.Settings.UseNativeVideoRendering;
         }
 
         var themeIndex = _services.Settings.Theme switch
@@ -358,7 +372,6 @@ public sealed partial class SettingsPageViewModel : PageViewModelBase
     private void RaiseLibraryProperties()
     {
         OnPropertyChanged(nameof(LibrarySummary));
-        OnPropertyChanged(nameof(AboutSummary));
         OnPropertyChanged(nameof(ScanStatusText));
         OnPropertyChanged(nameof(IsScanning));
         OnPropertyChanged(nameof(ScanProgress));

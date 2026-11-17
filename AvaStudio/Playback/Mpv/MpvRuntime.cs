@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -129,7 +130,11 @@ public sealed class MpvRuntime : IAsyncDisposable
     {
         ConfigureBase(context);
 
-        if (videoOutput is IMpvRenderVideoOutput renderOutput)
+        if (videoOutput is INativeVideoOutput nativeOutput && nativeOutput.WindowId != 0)
+        {
+            ConfigureNative(context, nativeOutput.WindowId);
+        }
+        else if (videoOutput is IMpvRenderVideoOutput renderOutput)
         {
             SetOption(context, "vo", "libmpv");
 
@@ -204,6 +209,19 @@ public sealed class MpvRuntime : IAsyncDisposable
     }
 
     /// <summary>
+    /// Windows 原生窗口配置：libmpv 的 GPU/D3D11 输出直接渲染到 <c>wid</c>，
+    /// 视频帧不经过 Avalonia 纹理，走 D3D11VA 零拷贝硬件解码。
+    /// </summary>
+    private static void ConfigureNative(IntPtr context, long windowId)
+    {
+        SetOption(context, "vo", "gpu");
+        SetOption(context, "gpu-api", "d3d11");
+        SetOption(context, "hwdec", "auto-safe");
+        SetOption(context, "wid", windowId.ToString(CultureInfo.InvariantCulture));
+        ConfigureGpuQuality(context);
+    }
+
+    /// <summary>
     /// GPU/OpenGL 配置：对齐 mpv 的 high-quality profile（ewa_lanczossharp、
     /// antiring、deband），并补上 8-bit FBO 的抖动与 HDR→SDR 色调映射。
     /// </summary>
@@ -212,7 +230,12 @@ public sealed class MpvRuntime : IAsyncDisposable
         // Windows 的 ANGLE/OpenGL 与 D3D11VA copy-back 在 4K 下会掉帧，
         // 保持软件解码；Linux 原生 GLX/EGL 可以走 VAAPI 零拷贝解码。
         SetOption(context, "hwdec", OperatingSystem.IsLinux() ? "auto-safe" : "no");
+        ConfigureGpuQuality(context);
+    }
 
+    /// <summary>GPU 路径共用的高质量缩放、去色带、抖动和 HDR→SDR 设置。</summary>
+    private static void ConfigureGpuQuality(IntPtr context)
+    {
         SetOption(context, "scale", "ewa_lanczossharp");
         SetOption(context, "cscale", "ewa_lanczossharp");
         SetOption(context, "dscale", "mitchell");

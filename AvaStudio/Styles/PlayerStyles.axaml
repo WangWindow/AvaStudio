@@ -8,9 +8,9 @@
     <Setter Property="Height" Value="126" />
     <Setter Property="Padding" Value="16" />
     <Setter Property="CornerRadius" Value="8" />
-    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
-    <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="BoxShadow" Value="0 4 16 0 #33000000" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlBackgroundBaseLowBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
   </Style>
 
   <Style Selector="Border.player-cover">
@@ -101,7 +101,7 @@
   </Style>
 
   <Style Selector="Button.player-play:pressed">
-    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListMediumBrush}" />
   </Style>
 
   <!-- 随机播放开启时保留开关状态，不改变图标含义。 -->

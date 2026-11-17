@@ -26,7 +26,7 @@
         ZIndex="0"
         IsHitTestVisible="False" />
 
-      <!-- 透明标题栏：左侧透出导航面板的 Mica，右侧透出更亮的内容表面；整条都在面板之上。 -->
+      <!-- 透明标题栏：整条透出统一的外壳底色，只承载窗口按钮、搜索和拖动面。 -->
       <Border x:Name="TitleBarStrip" Grid.Row="0" ZIndex="3">
         <Grid ColumnDefinitions="Auto,*,Auto">
           <StackPanel x:Name="TitleBarLeft"
@@ -34,26 +34,15 @@
             Spacing="6"
             VerticalAlignment="Center"
             IsVisible="{Binding !IsImmersiveOpen}">
-            <!-- 窄屏汉堡；展开/紧凑模式使用导航面板头的按钮。 -->
+            <!-- 顶部栏只保留导航开关；返回历史由 Alt+← 提供，不再占用可见按钮。 -->
             <Button x:Name="NavToggleButton"
               Classes="icon-tool"
               chrome:WindowDecorationProperties.ElementRole="User"
-              Click="OnNavigationToggleClick"
+              Click="OnPaneToggleClick"
               AutomationProperties.Name="打开导航菜单"
               ToolTip.Tip="打开导航菜单（Ctrl+E）">
               <fi:SymbolIcon Symbol="Navigation" FontSize="16" />
             </Button>
-
-            <fi:SymbolIcon Symbol="Play"
-              FontSize="16"
-              Margin="2,0,0,0"
-              Foreground="{DynamicResource SystemControlHighlightAccentBrush}"
-              VerticalAlignment="Center" />
-            <TextBlock x:Name="TitleBarAppName"
-              Text="AvaStudio"
-              FontSize="12.5"
-              FontWeight="SemiBold"
-              VerticalAlignment="Center" />
           </StackPanel>
 
           <!-- 独立播放页标题栏：音视频共用，只保留退出、媒体图标、片名和窗口按钮。
@@ -94,7 +83,8 @@
               VerticalAlignment="Center" />
           </StackPanel>
 
-          <!-- 中间空白区域是唯一的 Win32 拖动面；控件留在客户区内。 -->
+          <!-- 中间空白区域是唯一的 Win32 拖动面；搜索胶囊浮在它上面。
+               直接放在 Grid 中，避免额外的透明容器覆盖导航面板左上角的返回按钮。 -->
           <Border x:Name="TitleBarDragRegion"
             Grid.Column="1"
             Background="Transparent"
@@ -105,16 +95,6 @@
             Orientation="Horizontal"
             VerticalAlignment="Stretch"
             chrome:WindowDecorationProperties.ElementRole="User">
-            <Button Classes="icon-tool"
-              Margin="0,0,6,0"
-              VerticalAlignment="Center"
-              chrome:WindowDecorationProperties.ElementRole="User"
-              Command="{Binding OpenFilesCommand}"
-              AutomationProperties.Name="打开文件"
-              ToolTip.Tip="打开文件（Ctrl+O）">
-              <fi:SymbolIcon Symbol="FolderOpen" FontSize="15" />
-            </Button>
-
             <Button x:Name="MinimizeButton"
               Classes="caption"
               chrome:WindowDecorationProperties.ElementRole="MinimizeButton"
@@ -156,73 +136,65 @@
                 Data="M0.5,0.5 L9.5,9.5 M9.5,0.5 L0.5,9.5" />
             </Button>
           </StackPanel>
+
+          <!-- 标题栏搜索：Windows 11 设置式的居中胶囊。展开/紧凑模式横跨整条标题栏居中，
+               窄屏回到导航汉堡与右侧窗口按钮之间的中间列。标记为 User，避免被拖动面吞掉。 -->
+          <Border x:Name="TitleBarSearchHost"
+            ZIndex="1"
+            Height="26"
+            MinWidth="140"
+            MaxWidth="520"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Center"
+            CornerRadius="13"
+            chrome:WindowDecorationProperties.ElementRole="User"
+            ToolTip.Tip="搜索（Ctrl+F）">
+            <Grid ClipToBounds="True">
+              <TextBox x:Name="SearchBox"
+                Classes="titlebar-search"
+                Text="{Binding SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                PlaceholderText="搜索"
+                AutomationProperties.Name="搜索"
+                KeyDown="OnSearchBoxKeyDown" />
+
+              <fi:SymbolIcon Symbol="Search"
+                FontSize="13"
+                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Margin="11,0,0,0"
+                IsHitTestVisible="False" />
+
+              <!-- 键盘聚焦时显示 Windows 11 风格的强调色下划线。 -->
+              <Border x:Name="SearchFocusUnderline"
+                Height="2"
+                Margin="14,0"
+                CornerRadius="1"
+                VerticalAlignment="Bottom"
+                Background="{DynamicResource SystemControlHighlightAccentBrush}"
+                IsHitTestVisible="False" />
+            </Grid>
+          </Border>
         </Grid>
       </Border>
 
       <!-- 导航面板贯穿标题栏、内容与底栏行，作为整个外壳的左侧表面；
-           标题栏绘制在它上面，内层用 32 高垫片让出标题栏。 -->
+           顶部汉堡按钮已移到标题栏，列表用 48 DIP 顶部留白避开标题栏。 -->
       <Border x:Name="NavPanel"
         Grid.Row="0"
         Grid.RowSpan="3"
         ZIndex="2"
         HorizontalAlignment="Left"
-        VerticalAlignment="Stretch"
-        BorderBrush="{DynamicResource SystemControlBackgroundBaseLowBrush}"
-        BorderThickness="0,0,1,0">
-        <Grid RowDefinitions="40,Auto,Auto,*,Auto">
-          <!-- 面板顶部 40 高条：返回按钮与下方导航按钮同尺寸（40×40），图标落在同一列。 -->
-          <Grid Grid.Row="0" x:Name="PaneTopStrip">
-            <Button x:Name="BackButton"
-              Classes="icon-tool"
-              VerticalAlignment="Center"
-              IsEnabled="{Binding CanGoBack}"
-              Command="{Binding GoBackCommand}"
-              AutomationProperties.Name="返回"
-              ToolTip.Tip="返回（Alt+←）">
-              <fi:SymbolIcon Symbol="ArrowLeft" FontSize="16" />
-            </Button>
-          </Grid>
-
-          <!-- 面板头：40×40 折叠/展开按钮，展开模式收成 48 窄栏，紧凑/窄屏打开浮层。 -->
-          <Grid Grid.Row="1" x:Name="PaneHeader">
-            <Button x:Name="PaneToggleButton"
-              Classes="pane-toggle"
-              Click="OnPaneToggleClick"
-              AutomationProperties.Name="打开或关闭导航菜单"
-              ToolTip.Tip="收起导航菜单（Ctrl+E）">
-              <fi:SymbolIcon Symbol="Navigation" FontSize="16" />
-            </Button>
-          </Grid>
-
-          <Grid x:Name="SearchHost" Grid.Row="2" Height="32">
-            <TextBox x:Name="SearchBox"
-              Classes="nav-search"
-              Text="{Binding SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-              PlaceholderText="搜索"
-              AutomationProperties.Name="搜索"
-              KeyDown="OnSearchBoxKeyDown" />
-
-            <fi:SymbolIcon x:Name="SearchGlyph"
-              Symbol="Search"
-              FontSize="14"
-              Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-              HorizontalAlignment="Left"
-              VerticalAlignment="Center"
-              Margin="10,0,0,0"
-              IsHitTestVisible="False" />
-
-            <!-- 窄栏保留同高的搜索入口，避免折叠时行高跳变。 -->
-            <Button x:Name="CompactSearchButton"
-              Classes="icon-tool"
-              Click="OnCompactSearchClick"
-              AutomationProperties.Name="搜索"
-              ToolTip.Tip="搜索">
-              <fi:SymbolIcon Symbol="Search" FontSize="14" />
-            </Button>
-          </Grid>
+        VerticalAlignment="Stretch">
+        <Grid RowDefinitions="*,Auto">
+          <!-- 仅背景层：acrylic 模式下降低不透明度，让原生材质透出；内容层保持完整亮度。 -->
+          <Border x:Name="NavPanelBackdrop"
+            Grid.RowSpan="2"
+            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+            IsHitTestVisible="False" />
 
           <ListBox x:Name="NavigationList"
-            Grid.Row="3"
+            Grid.Row="0"
             Classes="nav-list"
             ItemsSource="{Binding NavigationItems}"
             SelectedItem="{Binding SelectedNavigationItem, Mode=TwoWay}"
@@ -277,7 +249,7 @@
             </ListBox.ItemTemplate>
           </ListBox>
 
-          <StackPanel Grid.Row="4" x:Name="PaneFooter">
+          <StackPanel Grid.Row="1" x:Name="PaneFooter">
             <Border Classes="divider" Margin="0,0,0,8" />
             <Button x:Name="SettingsNavButton"
               Classes="nav-footer"
@@ -354,15 +326,13 @@
           </Grid>
         </Grid>
 
-        <Button x:Name="NavigationScrim"
+        <!-- 纯命中层：只负责点击内容关闭抽屉，不参与按钮模板，因此没有悬浮/按下变色。 -->
+        <Border x:Name="NavigationScrim"
           ZIndex="1"
-          BorderThickness="0"
-          Padding="0"
+          Background="Transparent"
           HorizontalAlignment="Stretch"
           VerticalAlignment="Stretch"
-          Focusable="False"
-          IsTabStop="False"
-          Click="OnNavigationScrimClick"
+          PointerPressed="OnNavigationScrimPointerPressed"
           AutomationProperties.Name="关闭导航" />
       </Grid>
 

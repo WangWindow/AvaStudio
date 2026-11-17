@@ -13,7 +13,7 @@ public sealed partial class NetworkPageViewModel : PageViewModelBase
     private readonly Action<string> _reportStatus;
 
     public NetworkPageViewModel(DesktopService desktop, Action<string> reportStatus)
-        : base("媒体服务器", Symbol.Server)
+        : base("网络", Symbol.Server)
     {
         _desktop = desktop;
         _reportStatus = reportStatus;
