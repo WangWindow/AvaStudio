@@ -209,9 +209,9 @@ public sealed class MpvRuntime : IAsyncDisposable
     /// </summary>
     private static void ConfigureGpuRender(IntPtr context)
     {
-        // 本机 ANGLE/OpenGL 与 D3D11VA copy-back 在 4K 下会掉帧；
-        // GPU 渲染模式保持软件解码，把 CPU 留给色调映射和缩放。
-        SetOption(context, "hwdec", "no");
+        // Windows 的 ANGLE/OpenGL 与 D3D11VA copy-back 在 4K 下会掉帧，
+        // 保持软件解码；Linux 原生 GLX/EGL 可以走 VAAPI 零拷贝解码。
+        SetOption(context, "hwdec", OperatingSystem.IsLinux() ? "auto-safe" : "no");
 
         SetOption(context, "scale", "ewa_lanczossharp");
         SetOption(context, "cscale", "ewa_lanczossharp");
